@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+
+<table>
+  <base>CRM/Membershipcard</base>
+  <class>MembershipCardTemplate</class>
+  <name>civicrm_membership_card_template</name>
+  <comment>FIXME</comment>
+  <log>true</log>
+
+  <field>
+    <name>id</name>
+    <type>int unsigned</type>
+    <required>true</required>
+    <comment>Unique MembershipCardTemplate ID</comment>
+    <html>
+      <type>Number</type>
+    </html>
+  </field>
+  <primaryKey>
+    <name>id</name>
+    <autoincrement>true</autoincrement>
+  </primaryKey>
+  <field>
+    <name>name</name>
+    <title>Name</title>
+    <comment>Template name</comment>
+    <type>varchar</type>
+    <length>255</length>
+    <required>true</required>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>Text</type>
+    </html>
+  </field>
+
+  <field>
+    <name>description</name>
+    <title>Description</title>
+    <comment>Template description</comment>
+    <type>text</type>
+    <required>false</required>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>TextArea</type>
+      <rows>4</rows>
+      <cols>60</cols>
+    </html>
+  </field>
+
+  <field>
+    <name>card_width</name>
+    <title>Card Width</title>
+    <type>int unsigned</type>
+    <default>350</default>
+    <required>false</required>
+    <comment>Card width in pixels</comment>
+    <html>
+      <type>Number</type>
+    </html>
+  </field>
+
+  <field>
+    <name>card_height</name>
+    <title>Card Height</title>
+    <type>int unsigned</type>
+    <default>220</default>
+    <required>false</required>
+    <comment>Card height in pixels</comment>
+    <html>
+      <type>Number</type>
+    </html>
+  </field>
+
+  <field>
+    <name>background_color</name>
+    <title>Background color</title>
+    <comment>Background color</comment>
+    <type>varchar</type>
+    <length>7</length>
+    <default>'#ffffff'</default>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>Text</type>
+    </html>
+  </field>
+
+  <field>
+    <name>background_image</name>
+    <title>Background image</title>
+    <comment>Background image</comment>
+    <type>varchar</type>
+    <length>255</length>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>Text</type>
+    </html>
+  </field>
+
+  <field>
+    <name>elements</name>
+    <title>Elements</title>
+    <comment>JSON data for card elements</comment>
+    <type>longtext</type>
+    <required>false</required>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>TextArea</type>
+      <rows>4</rows>
+      <cols>60</cols>
+    </html>
+  </field>
+
+  <field>
+    <name>is_active</name>
+    <title>Is Active</title>
+    <comment>Is template active</comment>
+    <type>boolean</type>
+    <default>1</default>
+    <required>false</required>
+    <export>true</export>
+    <html>
+      <type>CheckBox</type>
+    </html>
+  </field>
+
+  <field>
+    <name>created_date</name>
+    <title>Created Date</title>
+    <default>CURRENT_TIMESTAMP</default>
+    <type>timestamp</type>
+    <comment>When template was created</comment>
+    <import>true</import>
+    <headerPattern>/created(.?date)?/i</headerPattern>
+    <dataPattern>/^\d{4}-?\d{2}-?\d{2} ?(\d{2}:?\d{2}:?(\d{2})?)?$/</dataPattern>
+    <html>
+      <type>Select Date</type>
+      <formatType>activityDateTime</formatType>
+      <label>Created Date</label>
+    </html>
+  </field>
+  <field>
+    <name>modified_date</name>
+    <title>Modified Date</title>
+    <default>CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP</default>
+    <comment>When template was modified</comment>
+    <type>datetime</type>
+    <import>true</import>
+    <headerPattern>/modified(.?date)?/i</headerPattern>
+    <dataPattern>/^\d{4}-?\d{2}-?\d{2} ?(\d{2}:?\d{2}:?(\d{2})?)?$/</dataPattern>
+    <html>
+      <type>Select Date</type>
+      <formatType>activityDateTime</formatType>
+    </html>
+  </field>
+</table>

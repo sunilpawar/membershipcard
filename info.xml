@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<extension key="com.skvare.membershipcard" type="module">
+  <file>membershipcard</file>
+  <name>Membership Card Designer</name>
+  <description>FIXME</description>
+  <description>
+    Advanced membership card designer with drag-and-drop functionality, token support, and photo integration. Create professional membership cards with customizable templates.
+  </description>
+  <license>AGPL-3.0</license>
+  <maintainer>
+    <author>FIXME</author>
+    <email>FIXME</email>
+  </maintainer>
+  <urls>
+    <url desc="Main Extension Page">http://FIXME</url>
+    <url desc="Documentation">http://FIXME</url>
+    <url desc="Support">http://FIXME</url>
+    <url desc="Licensing">http://www.gnu.org/licenses/agpl-3.0.html</url>
+  </urls>
+  <releaseDate>2025-08-03</releaseDate>
+  <version>1.0</version>
+  <develStage>alpha</develStage>
+  <compatibility>
+    <ver>6.6</ver>
+  </compatibility>
+  <comments>
+    This extension provides a comprehensive membership card designer that allows organizations to:
+    - Create custom membership card templates with drag-and-drop interface
+    - Use tokens for dynamic content (contact info, membership details, organization data)
+    - Support for photos and images
+    - QR codes and barcodes for verification
+    - Professional card layouts similar to Wild Apricot
+    - Bulk card generation for memberships
+    - Card verification system
+    - Export cards as PNG/PDF
+
+    Features:
+    - Visual template designer with Fabric.js
+    - Token-based dynamic content
+    - Photo upload and positioning
+    - Multiple card sizes and backgrounds
+    - Grid snapping and alignment tools
+    - Layer management
+    - Preview functionality
+    - Responsive design
+    - Print-ready output
+  </comments>
+  <classloader>
+    <psr0 prefix="CRM_" path="."/>
+    <psr4 prefix="Civi\" path="Civi"/>
+  </classloader>
+  <civix>
+    <namespace>CRM/Membershipcard</namespace>
+    <format>23.02.1</format>
+    <angularModule>crmMembershipcard</angularModule>
+  </civix>
+  <mixins>
+    <mixin>mgd-php@1.0.0</mixin>
+    <mixin>setting-php@1.0.0</mixin>
+    <mixin>smarty-v2@1.0.1</mixin>
+    <mixin>menu-xml@1.0.0</mixin>
+    <mixin>entity-types-php@1.0.0</mixin>
+  </mixins>
+  <upgrader>CRM_Membershipcard_Upgrader</upgrader>
+</extension>
