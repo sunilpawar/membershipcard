@@ -64,8 +64,8 @@ function membershipcard_civicrm_pageRun(&$page) {
 
   if ($pageName == 'CRM_Member_Page_Tab') {
     // Add membership card link to membership tab
-    CRM_Core_Resources::singleton()->addScriptFile('com.skare.membershipcard', 'js/membership-tab.js');
-    CRM_Core_Resources::singleton()->addStyleFile('com.skare.membershipcard', 'css/membership-card.css');
+    CRM_Core_Resources::singleton()->addScriptFile('com.skvare.membershipcard', 'js/membership-tab.js');
+    CRM_Core_Resources::singleton()->addStyleFile('com.skvare.membershipcard', 'css/membership-card.css');
   }
 }
 

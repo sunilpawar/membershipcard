@@ -12,10 +12,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>1</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>85</weight>
   </item>
-
   <!-- Add New Template -->
   <item>
     <path>civicrm/membership-card-templates/add</path>
@@ -28,10 +27,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>1</weight>
   </item>
-
   <!-- Edit Template -->
   <item>
     <path>civicrm/membership-card-templates/edit</path>
@@ -44,10 +42,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>2</weight>
   </item>
-
   <!-- Membership Cards Management -->
   <item>
     <path>civicrm/membership-cards</path>
@@ -60,10 +57,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>1</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>86</weight>
   </item>
-
   <!-- Generate Card -->
   <item>
     <path>civicrm/membership-card/generate</path>
@@ -76,10 +72,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>1</weight>
   </item>
-
   <!-- Download Card -->
   <item>
     <path>civicrm/membership-card/download</path>
@@ -92,10 +87,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>2</weight>
   </item>
-
   <!-- Verify Card -->
   <item>
     <path>civicrm/membership-card/verify</path>
@@ -108,10 +102,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>1</is_public>
     <is_exposed>1</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>3</weight>
   </item>
-
   <!-- Email Card -->
   <item>
     <path>civicrm/membership-card/email</path>
@@ -124,10 +117,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>4</weight>
   </item>
-
   <!-- Bulk Generate Cards -->
   <item>
     <path>civicrm/membership-cards/bulk-generate</path>
@@ -140,10 +132,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>5</weight>
   </item>
-
   <!-- Template Preview -->
   <item>
     <path>civicrm/membership-card-template/preview</path>
@@ -156,10 +147,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>6</weight>
   </item>
-
   <!-- Template Export -->
   <item>
     <path>civicrm/membership-card-template/export</path>
@@ -172,10 +162,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>7</weight>
   </item>
-
   <!-- Template Import -->
   <item>
     <path>civicrm/membership-card-template/import</path>
@@ -188,10 +177,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>8</weight>
   </item>
-
   <!-- Settings -->
   <item>
     <path>civicrm/membership-card/settings</path>
@@ -204,10 +192,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>9</weight>
   </item>
-
   <!-- Card Statistics -->
   <item>
     <path>civicrm/membership-cards/statistics</path>
@@ -220,10 +207,9 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>10</weight>
   </item>
-
   <!-- API Documentation -->
   <item>
     <path>civicrm/membership-card/api-docs</path>
@@ -236,7 +222,13 @@
     <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>0</is_public>
     <is_exposed>0</is_exposed>
-    <module_data></module_data>
+    <module_data/>
     <weight>11</weight>
+  </item>
+  <item>
+    <path>civicrm/membershipcard-list</path>
+    <page_callback>CRM_Membershipcard_Page_MembershipCards</page_callback>
+    <title>MembershipCards</title>
+    <access_arguments>access CiviCRM</access_arguments>
   </item>
 </menu>

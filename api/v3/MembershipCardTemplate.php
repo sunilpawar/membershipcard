@@ -100,7 +100,10 @@ function civicrm_api3_membership_card_template_create($params) {
       CRM_Core_DAO::executeQuery($sql, $sqlParams);
       $templateId = $templateData['id'];
     } else {
+      $cardTemplate = CRM_Membershipcard_BAO_MembershipCardTemplate::create($templateData);
+      $templateId = $cardTemplate->id;
       // Create new template
+      /*
       $sql = "
         INSERT INTO civicrm_membership_card_template
         (name, description, card_width, card_height, background_color,
@@ -119,9 +122,9 @@ function civicrm_api3_membership_card_template_create($params) {
         9 => [$templateData['created_date'], 'String'],
         10 => [$templateData['modified_date'], 'String'],
       ];
-
       CRM_Core_DAO::executeQuery($sql, $sqlParams);
       $templateId = CRM_Core_DAO::singleValueQuery('SELECT LAST_INSERT_ID()');
+      */
     }
 
     // Return created/updated template
