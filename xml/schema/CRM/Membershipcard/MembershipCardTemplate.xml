@@ -157,4 +157,103 @@
       <formatType>activityDateTime</formatType>
     </html>
   </field>
+
+
+  <field>
+    <name>front_background_color</name>
+    <title>Front Background color</title>
+    <comment>Front Background color</comment>
+    <type>varchar</type>
+    <length>7</length>
+    <default>'#ffffff'</default>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>Text</type>
+    </html>
+  </field>
+
+  <field>
+    <name>back_background_color</name>
+    <title>Back Background color</title>
+    <comment>Back Background color</comment>
+    <type>varchar</type>
+    <length>7</length>
+    <default>'#ffffff'</default>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>Text</type>
+    </html>
+  </field>
+
+  <field>
+    <name>front_background_image</name>
+    <title>Front Background image</title>
+    <comment>Front Background image</comment>
+    <type>varchar</type>
+    <length>255</length>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>Text</type>
+    </html>
+  </field>
+
+  <field>
+    <name>back_background_image</name>
+    <title>Back Background image</title>
+    <comment>Back Background image</comment>
+    <type>varchar</type>
+    <length>255</length>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>Text</type>
+    </html>
+  </field>
+
+  <field>
+    <name>front_elements</name>
+    <title>Front Elements</title>
+    <comment>JSON data for card elements</comment>
+    <type>longtext</type>
+    <required>false</required>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>TextArea</type>
+      <rows>4</rows>
+      <cols>60</cols>
+    </html>
+  </field>
+
+  <field>
+    <name>back_elements</name>
+    <title>Back Elements</title>
+    <comment>JSON data for card elements</comment>
+    <type>longtext</type>
+    <required>false</required>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>TextArea</type>
+      <rows>4</rows>
+      <cols>60</cols>
+    </html>
+  </field>
+
+  <field>
+    <name>is_dual_sided</name>
+    <title>Is Dual Sided</title>
+    <comment>Whether template supports both sides</comment>
+    <type>boolean</type>
+    <default>1</default>
+    <required>false</required>
+    <export>true</export>
+    <html>
+      <type>CheckBox</type>
+    </html>
+  </field>
+
 </table>

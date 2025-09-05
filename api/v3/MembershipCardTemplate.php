@@ -27,9 +27,16 @@ function civicrm_api3_membership_card_template_create($params) {
       'card_width' => CRM_Utils_Array::value('card_width', $params, 350),
       'card_height' => CRM_Utils_Array::value('card_height', $params, 220),
       'background_color' => CRM_Utils_Array::value('background_color', $params, '#ffffff'),
+      'front_background_color' => CRM_Utils_Array::value('front_background_color', $params, '#ffffff'),
+      'back_background_color' => CRM_Utils_Array::value('back_background_color', $params, '#ffffff'),
       'background_image' => CRM_Utils_Array::value('background_image', $params),
+      'front_background_image' => CRM_Utils_Array::value('front_background_image', $params),
+      'back_background_image' => CRM_Utils_Array::value('back_background_image', $params),
       'elements' => CRM_Utils_Array::value('elements', $params, '{}'),
+      'front_elements' => CRM_Utils_Array::value('front_elements', $params, '{}'),
+      'back_elements' => CRM_Utils_Array::value('back_elements', $params, '{}'),
       'is_active' => CRM_Utils_Array::value('is_active', $params, 1),
+      'is_dual_sided' => CRM_Utils_Array::value('is_dual_sided', $params, 0),
       'modified_date' => date('Y-m-d H:i:s'),
     ];
 
@@ -62,6 +69,26 @@ function civicrm_api3_membership_card_template_create($params) {
       }
     }
 
+    if (!empty($templateData['front_elements']) && !is_string($templateData['front_elements'])) {
+      $templateData['front_elements'] = json_encode($templateData['front_elements']);
+    }
+    if (!empty($templateData['front_elements'])) {
+      $decoded = json_decode($templateData['front_elements'], TRUE);
+      if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new API_Exception("Invalid JSON in front_elements field");
+      }
+    }
+
+    if (!empty($templateData['back_elements']) && !is_string($templateData['back_elements'])) {
+      $templateData['back_elements'] = json_encode($templateData['back_elements']);
+    }
+    if (!empty($templateData['back_elements'])) {
+      $decoded = json_decode($templateData['back_elements'], TRUE);
+      if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new API_Exception("Invalid JSON in back_elements field");
+      }
+    }
+
     // Validate dimensions
     if ($templateData['card_width'] < 100 || $templateData['card_width'] > 1000) {
       throw new API_Exception("Card width must be between 100 and 1000 pixels");
@@ -72,6 +99,13 @@ function civicrm_api3_membership_card_template_create($params) {
 
     // Validate background color
     if (!preg_match('/^#[a-fA-F0-9]{6}$/', $templateData['background_color'])) {
+      throw new API_Exception("Invalid background color format");
+    }
+
+    if (!preg_match('/^#[a-fA-F0-9]{6}$/', $templateData['front_background_color'])) {
+      throw new API_Exception("Invalid background color format");
+    }
+    if (!preg_match('/^#[a-fA-F0-9]{6}$/', $templateData['back_background_color'])) {
       throw new API_Exception("Invalid background color format");
     }
 
@@ -99,18 +133,51 @@ function _civicrm_api3_membership_card_template_create_spec(&$spec) {
   $spec['background_color']['type'] = CRM_Utils_Type::T_STRING;
   $spec['background_color']['api.default'] = '#ffffff';
 
+  $spec['front_background_color']['title'] = 'Front Background Color';
+  $spec['front_background_color']['description'] = 'Front Background color in hex format';
+  $spec['front_background_color']['type'] = CRM_Utils_Type::T_STRING;
+  $spec['front_background_color']['api.default'] = '#ffffff';
+
+  $spec['back_background_color']['title'] = 'Back Background Color';
+  $spec['back_background_color']['description'] = 'Back Background color in hex format';
+  $spec['back_background_color']['type'] = CRM_Utils_Type::T_STRING;
+  $spec['back_background_color']['api.default'] = '#ffffff';
+
   $spec['background_image']['title'] = 'Background Image';
   $spec['background_image']['description'] = 'Path to background image';
   $spec['background_image']['type'] = CRM_Utils_Type::T_STRING;
+
+  $spec['front_background_image']['title'] = 'Front Background Image';
+  $spec['front_background_image']['description'] = 'Path to background image';
+  $spec['front_background_image']['type'] = CRM_Utils_Type::T_STRING;
+
+  $spec['back_background_image']['title'] = 'Back Background Image';
+  $spec['back_background_image']['description'] = 'Path to background image';
+  $spec['back_background_image']['type'] = CRM_Utils_Type::T_STRING;
+
 
   $spec['elements']['title'] = 'Elements';
   $spec['elements']['description'] = 'JSON string of card elements';
   $spec['elements']['type'] = CRM_Utils_Type::T_LONGTEXT;
 
+  $spec['front_elements']['title'] = 'Front Elements';
+  $spec['front_elements']['description'] = 'JSON string of card elements';
+  $spec['front_elements']['type'] = CRM_Utils_Type::T_LONGTEXT;
+
+  $spec['back_elements']['title'] = 'Back Elements';
+  $spec['back_elements']['description'] = 'JSON string of card elements';
+  $spec['back_elements']['type'] = CRM_Utils_Type::T_LONGTEXT;
+
+
   $spec['is_active']['title'] = 'Is Active';
   $spec['is_active']['description'] = 'Whether the template is active';
   $spec['is_active']['type'] = CRM_Utils_Type::T_BOOLEAN;
   $spec['is_active']['api.default'] = 1;
+
+  $spec['is_dual_sided']['title'] = 'Is Dual Sided';
+  $spec['is_dual_sided']['description'] = 'Whether the template is Dual Sided';
+  $spec['is_dual_sided']['type'] = CRM_Utils_Type::T_BOOLEAN;
+  $spec['is_dual_sided']['api.default'] = 0;
 }
 
 /**
@@ -183,9 +250,16 @@ function civicrm_api3_membership_card_template_get($params) {
         'card_width' => $dao->card_width,
         'card_height' => $dao->card_height,
         'background_color' => $dao->background_color,
+        'front_background_color' => $dao->front_background_color,
+        'back_background_color' => $dao->back_background_color,
         'background_image' => $dao->background_image,
+        'front_background_image' => $dao->front_background_image,
+        'back_background_image' => $dao->back_background_image,
         'elements' => $dao->elements,
+        'front_elements' => $dao->front_elements,
+        'back_elements' => $dao->back_elements,
         'is_active' => $dao->is_active,
+        'is_dual_sided' => $dao->is_dual_sided,
         'created_date' => $dao->created_date,
         'modified_date' => $dao->modified_date,
       ];
@@ -193,6 +267,14 @@ function civicrm_api3_membership_card_template_get($params) {
       // Decode elements if requested
       if (!empty($params['decode_elements']) && !empty($template['elements'])) {
         $template['elements_decoded'] = json_decode($template['elements'], TRUE);
+      }
+
+      if (!empty($params['decode_front_elements']) && !empty($template['front_elements'])) {
+        $template['front_elements_decoded'] = json_decode($template['front_elements'], TRUE);
+      }
+
+      if (!empty($params['decode_back_elements']) && !empty($template['back_elements'])) {
+        $template['back_elements_decoded'] = json_decode($template['back_elements'], TRUE);
       }
 
       if ($sequential) {

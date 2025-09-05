@@ -47,6 +47,13 @@ CREATE TABLE `civicrm_membership_card_template` (
   `is_active` tinyint NULL DEFAULT 1 COMMENT 'Is template active',
   `created_date` timestamp DEFAULT CURRENT_TIMESTAMP COMMENT 'When template was created',
   `modified_date` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'When template was modified',
+  `front_background_color` varchar(7) DEFAULT '#ffffff' COMMENT 'Front Background color',
+  `back_background_color` varchar(7) DEFAULT '#ffffff' COMMENT 'Back Background color',
+  `front_background_image` varchar(255) COMMENT 'Front Background image',
+  `back_background_image` varchar(255) COMMENT 'Back Background image',
+  `front_elements` longtext NULL COMMENT 'JSON data for card elements',
+  `back_elements` longtext NULL COMMENT 'JSON data for card elements',
+  `is_dual_sided` tinyint NULL DEFAULT 1 COMMENT 'Whether template supports both sides',
   PRIMARY KEY (`id`))
 ENGINE=InnoDB;
 

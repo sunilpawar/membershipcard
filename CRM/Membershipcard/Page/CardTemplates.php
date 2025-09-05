@@ -76,6 +76,12 @@ class CRM_Membershipcard_Page_CardTemplates extends CRM_Core_Page {
     if ($templateId) {
       $template = CRM_Membershipcard_BAO_MembershipCardTemplate::getTemplateById($templateId, TRUE);
       $template = (array)$template;
+      foreach (['front_background_color', 'front_background_image', 'front_elements'] as $sideField) {
+        $template['front_side'] = $template[$sideField] ?? NULL;
+      }
+      foreach (['back_background_color', 'back_background_image', 'back_elements'] as $sideField) {
+        $template['back_side'] = $template[$sideField] ?? NULL;
+      }
     }
 
     // Get available tokens

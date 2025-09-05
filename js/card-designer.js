@@ -1,6 +1,5 @@
 /**
- * Membership Card Designer - Fixed Token Functionality
- * Fixes drag and drop and click to insert token features
+ * Membership Card Designer - Enhanced with Dual-Sided Support
  */
 class MembershipCardDesigner {
   constructor() {
@@ -10,16 +9,64 @@ class MembershipCardDesigner {
     this.gridSize = 10;
     this.snapToGrid = true;
 
+    // Dual-sided support
+    this.currentSide = 'front';
+    this.cardData = {
+      front: {
+        elements: null,
+        background_color: '#ffffff',
+        background_image: null
+      },
+      back: {
+        elements: null,
+        background_color: '#ffffff',
+        background_image: null
+      }
+    };
+    this.isDualSided = false;
+
     this.init();
   }
 
   init() {
     this.initCanvas();
     this.initToolbar();
+    this.initSideToggle();
     this.initTokenPanel();
     this.initPropertyPanel();
     this.bindEvents();
     this.loadTemplate();
+  }
+
+  initSideToggle() {
+    const toolbar = document.getElementById('card-toolbar');
+
+    // Create side toggle container
+    const sideToggleContainer = document.createElement('div');
+    sideToggleContainer.className = 'side-toggle-container';
+    sideToggleContainer.innerHTML = `
+      <div class="side-toggle-group">
+        <label class="side-toggle-label">Card Side:</label>
+        <div class="btn-group side-toggle-buttons" role="group">
+          <button type="button" class="btn btn-primary active" id="front-side-btn" data-side="front">
+            <i class="fa fa-credit-card"></i> Front Side
+          </button>
+          <button type="button" class="btn btn-outline-primary" id="back-side-btn" data-side="back">
+            <i class="fa fa-credit-card fa-flip-horizontal"></i> Back Side
+          </button>
+        </div>
+        <div class="side-indicator">
+          <span class="current-side-text">Currently editing: <strong>Front Side</strong></span>
+        </div>
+      </div>
+    `;
+
+    // Insert at the beginning of toolbar
+    toolbar.insertBefore(sideToggleContainer, toolbar.firstChild);
+
+    // Bind side toggle events
+    document.getElementById('front-side-btn').addEventListener('click', () => this.switchSide('front'));
+    document.getElementById('back-side-btn').addEventListener('click', () => this.switchSide('back'));
   }
 
   initCanvas() {
@@ -70,6 +117,13 @@ class MembershipCardDesigner {
     addBarcodeBtn.onclick = () => this.addBarcode();
     toolbar.appendChild(addBarcodeBtn);
 
+    // Copy to other side button
+    const copyToOtherSideBtn = document.createElement('button');
+    copyToOtherSideBtn.className = 'btn btn-info';
+    copyToOtherSideBtn.innerHTML = '<i class="fa fa-copy"></i> Copy to Other Side';
+    copyToOtherSideBtn.onclick = () => this.copyToOtherSide();
+    toolbar.appendChild(copyToOtherSideBtn);
+
     // Delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn btn-danger';
@@ -85,8 +139,346 @@ class MembershipCardDesigner {
     gridToggle.innerHTML = '<i class="fa fa-grid"></i> Grid';
     gridToggle.onclick = () => this.toggleGrid();
     toolbar.appendChild(gridToggle);
+
+    // Preview both sides button
+    const previewBothBtn = document.createElement('button');
+    previewBothBtn.className = 'btn btn-success';
+    previewBothBtn.innerHTML = '<i class="fa fa-eye"></i> Preview Both Sides';
+    previewBothBtn.onclick = () => this.previewBothSides();
+    toolbar.appendChild(previewBothBtn);
   }
 
+  // Dual-sided functionality
+  switchSide(side) {
+    if (this.currentSide === side) return;
+
+    // Save current side data
+    this.saveCurrentSideData();
+
+    // Switch to new side
+    this.currentSide = side;
+
+    // Update UI
+    this.updateSideToggleUI();
+
+    // Load new side data
+    this.loadSideData();
+
+    // Clear selection
+    this.canvas.discardActiveObject();
+    this.onObjectDeselected();
+
+    // Update token recommendations
+    this.updateTokenRecommendations();
+
+    console.log(`Switched to ${side} side`);
+  }
+
+  updateSideToggleUI() {
+    // Update button states
+    document.getElementById('front-side-btn').className = this.currentSide === 'front'
+      ? 'btn btn-primary active'
+      : 'btn btn-outline-primary';
+
+    document.getElementById('back-side-btn').className = this.currentSide === 'back'
+      ? 'btn btn-primary active'
+      : 'btn btn-outline-primary';
+
+    // Update indicator text
+    const sideText = this.currentSide === 'front' ? 'Front Side' : 'Back Side';
+    document.querySelector('.current-side-text').innerHTML = `Currently editing: <strong>${sideText}</strong>`;
+
+    // Update canvas background for current side
+    const bgColor = this.cardData[this.currentSide].background_color || '#ffffff';
+    this.canvas.setBackgroundColor(bgColor, this.canvas.renderAll.bind(this.canvas));
+  }
+
+  saveCurrentSideData() {
+    // Save canvas state for current side
+    const canvasData = this.canvas.toJSON(['tokenValue', 'elementType', 'isToken', 'cardSide']);
+    this.cardData[this.currentSide].elements = canvasData;
+    this.cardData[this.currentSide].background_color = this.canvas.backgroundColor || '#ffffff';
+
+    console.log(`Saved ${this.currentSide} side data:`, this.cardData[this.currentSide]);
+  }
+
+  loadSideData() {
+    // Clear canvas
+    this.canvas.clear();
+
+    // Load side-specific data
+    const sideData = this.cardData[this.currentSide];
+
+    if (sideData.elements) {
+      this.canvas.loadFromJSON(sideData.elements, () => {
+        // Mark all objects with current side
+        this.canvas.forEachObject((obj) => {
+          obj.set('cardSide', this.currentSide);
+        });
+        this.canvas.renderAll();
+      });
+    }
+
+    // Set background
+    const bgColor = sideData.background_color || '#ffffff';
+    this.canvas.setBackgroundColor(bgColor, this.canvas.renderAll.bind(this.canvas));
+
+    // Set background image if exists
+    if (sideData.background_image) {
+      this.setBackgroundImage(sideData.background_image);
+    }
+  }
+
+  copyToOtherSide() {
+    if (!this.selectedElement) {
+      // Copy entire canvas to other side
+      const otherSide = this.currentSide === 'front' ? 'back' : 'front';
+      const currentData = this.canvas.toJSON(['tokenValue', 'elementType', 'isToken', 'cardSide']);
+
+      // Store current canvas data to other side
+      this.cardData[otherSide].elements = currentData;
+      this.cardData[otherSide].background_color = this.canvas.backgroundColor;
+
+      if (typeof CRM !== 'undefined') {
+        CRM.alert(`All elements copied to ${otherSide} side. Switch to ${otherSide} side to see them.`, 'Success', 'success');
+      } else {
+        alert(`All elements copied to ${otherSide} side. Switch to ${otherSide} side to see them.`);
+      }
+    } else {
+      // Copy selected element to other side
+      const otherSide = this.currentSide === 'front' ? 'back' : 'front';
+
+      this.selectedElement.clone((cloned) => {
+        cloned.set('cardSide', otherSide);
+
+        // Store the cloned element for the other side
+        if (!this.cardData[otherSide].pendingElements) {
+          this.cardData[otherSide].pendingElements = [];
+        }
+        this.cardData[otherSide].pendingElements.push(cloned.toObject(['tokenValue', 'elementType', 'isToken', 'cardSide']));
+
+        if (typeof CRM !== 'undefined') {
+          CRM.alert(`Selected element copied to ${otherSide} side. Switch to ${otherSide} side to see it.`, 'Success', 'success');
+        } else {
+          alert(`Selected element copied to ${otherSide} side. Switch to ${otherSide} side to see it.`);
+        }
+      });
+    }
+  }
+
+  // Enhanced add methods with side awareness
+  addText() {
+    const text = new fabric.Text('Sample Text', {
+      left: 50,
+      top: 50,
+      fontSize: 16,
+      fill: '#000000',
+      fontFamily: 'Arial',
+      cardSide: this.currentSide
+    });
+
+    this.canvas.add(text);
+    this.canvas.setActiveObject(text);
+    this.saveState();
+  }
+
+  addImage() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          fabric.Image.fromURL(event.target.result, (img) => {
+            img.set({
+              left: 50,
+              top: 50,
+              scaleX: 0.5,
+              scaleY: 0.5,
+              cardSide: this.currentSide
+            });
+            this.canvas.add(img);
+            this.canvas.setActiveObject(img);
+            this.saveState();
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    input.click();
+  }
+
+  addQRCode() {
+    const qrCode = new fabric.Rect({
+      left: 50,
+      top: 50,
+      width: 80,
+      height: 80,
+      fill: '#000000',
+      stroke: '#cccccc',
+      strokeWidth: 1,
+      cardSide: this.currentSide
+    });
+
+    const qrText = new fabric.Text('QR', {
+      left: 75,
+      top: 75,
+      fontSize: 12,
+      fill: '#ffffff',
+      fontFamily: 'Arial',
+      originX: 'center',
+      originY: 'center',
+      cardSide: this.currentSide
+    });
+
+    const group = new fabric.Group([qrCode, qrText], {
+      left: 50,
+      top: 50,
+      cardSide: this.currentSide
+    });
+
+    group.set('elementType', 'qrcode');
+    this.canvas.add(group);
+    this.canvas.setActiveObject(group);
+    this.saveState();
+  }
+
+  addBarcode() {
+    const barcode = new fabric.Rect({
+      left: 50,
+      top: 50,
+      width: 120,
+      height: 40,
+      fill: '#000000',
+      stroke: '#cccccc',
+      strokeWidth: 1,
+      cardSide: this.currentSide
+    });
+
+    const barcodeText = new fabric.Text('||||||||||', {
+      left: 110,
+      top: 70,
+      fontSize: 20,
+      fill: '#ffffff',
+      fontFamily: 'Courier New',
+      originX: 'center',
+      originY: 'center',
+      cardSide: this.currentSide
+    });
+
+    const group = new fabric.Group([barcode, barcodeText], {
+      left: 50,
+      top: 50,
+      cardSide: this.currentSide
+    });
+
+    group.set('elementType', 'barcode');
+    this.canvas.add(group);
+    this.canvas.setActiveObject(group);
+    this.saveState();
+  }
+
+  // Enhanced preview for both sides
+  previewBothSides() {
+    // Save current side first
+    this.saveCurrentSideData();
+
+    // Generate both sides
+    const frontData = this.generateSidePreview('front');
+    const backData = this.generateSidePreview('back');
+
+    this.showDualSidePreview(frontData, backData);
+  }
+
+  generateSidePreview(side) {
+    // Create temporary canvas for preview
+    const tempCanvas = new fabric.Canvas();
+    tempCanvas.setWidth(this.canvas.width);
+    tempCanvas.setHeight(this.canvas.height);
+
+    const sideData = this.cardData[side];
+    tempCanvas.setBackgroundColor(sideData.background_color || '#ffffff');
+
+    if (sideData.elements) {
+      tempCanvas.loadFromJSON(sideData.elements, () => {
+        // Replace tokens with sample data
+        tempCanvas.forEachObject((obj) => {
+          if (obj.type === 'text' && (obj.tokenValue || obj.isToken)) {
+            this.replaceTokensInText(obj);
+          }
+        });
+        tempCanvas.renderAll();
+      });
+    }
+
+    return tempCanvas.toDataURL('image/png');
+  }
+
+  showDualSidePreview(frontImageData, backImageData) {
+    const modal = document.createElement('div');
+    modal.className = 'modal fade dual-side-preview-modal';
+    modal.innerHTML = `
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title">
+              <i class="fa fa-eye"></i> Membership Card Preview - Both Sides
+            </h4>
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="dual-card-preview">
+              <div class="card-side-preview">
+                <h5><i class="fa fa-credit-card"></i> Front Side</h5>
+                <div class="card-preview-container">
+                  <img src="${frontImageData}" class="card-preview-image" alt="Front Side">
+                </div>
+              </div>
+              <div class="card-side-preview">
+                <h5><i class="fa fa-credit-card fa-flip-horizontal"></i> Back Side</h5>
+                <div class="card-preview-container">
+                  <img src="${backImageData}" class="card-preview-image" alt="Back Side">
+                </div>
+              </div>
+            </div>
+            <div class="preview-info">
+              <p class="text-muted">
+                <i class="fa fa-info-circle"></i>
+                Preview generated with sample data. Actual cards will show real member information.
+              </p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" onclick="window.print()">
+              <i class="fa fa-print"></i> Print Both Sides
+            </button>
+            <button type="button" class="btn btn-info" onclick="downloadBothSides('${frontImageData}', '${backImageData}')">
+              <i class="fa fa-download"></i> Download Both
+            </button>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+              <i class="fa fa-times"></i> Close
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Show modal
+    if (typeof $ !== 'undefined' && $.fn.modal) {
+      $(modal).modal('show');
+      $(modal).on('hidden.bs.modal', function() {
+        document.body.removeChild(modal);
+      });
+    }
+  }
+
+  // Enhanced token panel with side recommendations
   initTokenPanel() {
     const tokenPanel = document.getElementById('token-panel');
     const tokens = window.membershipTokens || this.getDefaultTokens();
@@ -94,6 +486,18 @@ class MembershipCardDesigner {
     // Clear existing content
     tokenPanel.innerHTML = '<h3>Available Tokens</h3><p class="text-muted small">Drag tokens to the card or click to insert</p>';
 
+    // Add side recommendations
+    const recommendationsDiv = document.createElement('div');
+    recommendationsDiv.className = 'side-recommendations';
+    recommendationsDiv.innerHTML = `
+      <h5>Recommended for ${this.currentSide === 'front' ? 'Front' : 'Back'} Side:</h5>
+      <div class="recommended-tokens" id="recommended-tokens">
+        ${this.getRecommendedTokensHTML()}
+      </div>
+    `;
+    tokenPanel.appendChild(recommendationsDiv);
+
+    // Add all token categories
     Object.keys(tokens).forEach(category => {
       const categoryDiv = document.createElement('div');
       categoryDiv.className = 'token-category';
@@ -113,27 +517,7 @@ class MembershipCardDesigner {
         tokenDiv.dataset.token = `{${category}.${tokenKey}}`;
         tokenDiv.dataset.tokenType = 'text';
 
-        // Drag start event
-        tokenDiv.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('text/plain', tokenDiv.dataset.token);
-          e.dataTransfer.setData('token-type', 'text');
-          e.dataTransfer.effectAllowed = 'copy';
-
-          // Add visual feedback
-          tokenDiv.style.opacity = '0.5';
-        });
-
-        // Drag end event
-        tokenDiv.addEventListener('dragend', (e) => {
-          tokenDiv.style.opacity = '1';
-        });
-
-        // Click to insert event
-        tokenDiv.addEventListener('click', (e) => {
-          e.preventDefault();
-          this.insertToken(tokenDiv.dataset.token);
-        });
-
+        this.bindTokenEvents(tokenDiv);
         tokenList.appendChild(tokenDiv);
       });
 
@@ -142,8 +526,189 @@ class MembershipCardDesigner {
     });
   }
 
+  getRecommendedTokensHTML() {
+    const frontTokens = [
+      '{contact.display_name}',
+      '{contact.image_URL}',
+      '{membership.membership_type}',
+      '{organization.organization_name}'
+    ];
+
+    const backTokens = [
+      '{membership.membership_id}',
+      '{membership.end_date}',
+      '{system.qr_code}',
+      '{system.barcode}',
+      '{contact.email}',
+      '{contact.phone}'
+    ];
+
+    const recommendedTokens = this.currentSide === 'front' ? frontTokens : backTokens;
+
+    return recommendedTokens.map(token =>
+      `<div class="token-item recommended" draggable="true" data-token="${token}" data-token-type="text">
+        ${token.replace(/[{}]/g, '').replace(/\./g, ' ').replace(/_/g, ' ')}
+      </div>`
+    ).join('');
+  }
+
+  updateTokenRecommendations() {
+    const sideText = this.currentSide === 'front' ? 'Front' : 'Back';
+    const recommendationsHeader = document.querySelector('.side-recommendations h5');
+    if (recommendationsHeader) {
+      recommendationsHeader.textContent = `Recommended for ${sideText} Side:`;
+    }
+
+    const recommendedContainer = document.getElementById('recommended-tokens');
+    if (recommendedContainer) {
+      recommendedContainer.innerHTML = this.getRecommendedTokensHTML();
+
+      // Bind events to new recommended tokens
+      recommendedContainer.querySelectorAll('.token-item').forEach(tokenDiv => {
+        this.bindTokenEvents(tokenDiv);
+      });
+    }
+  }
+
+  bindTokenEvents(tokenDiv) {
+    // Drag events
+    tokenDiv.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', tokenDiv.dataset.token);
+      e.dataTransfer.setData('token-type', 'text');
+      e.dataTransfer.effectAllowed = 'copy';
+      tokenDiv.style.opacity = '0.5';
+    });
+
+    tokenDiv.addEventListener('dragend', (e) => {
+      tokenDiv.style.opacity = '1';
+    });
+
+    // Click events
+    tokenDiv.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.insertToken(tokenDiv.dataset.token);
+    });
+  }
+
+  // Enhanced save state for dual-sided
+  saveState() {
+    this.saveCurrentSideData();
+
+    // Save complete template state
+    const templateData = {
+      card_width: this.canvas.width,
+      card_height: this.canvas.height,
+      front_side: this.cardData.front,
+      back_side: this.cardData.back,
+      current_side: this.currentSide,
+      is_dual_sided: this.isDualSided
+    };
+
+    localStorage.setItem('membershipcard_dual_template', JSON.stringify(templateData));
+  }
+
+  // Enhanced load template for dual-sided
+  loadTemplate() {
+    const templateData = window.templateData;
+
+    if (templateData) {
+      // Check if it's a dual-sided template
+      if (templateData.front_side || templateData.back_side || templateData.is_dual_sided) {
+        this.isDualSided = true;
+        this.cardData.front = templateData.front_side || this.cardData.front;
+        this.cardData.back = templateData.back_side || this.cardData.back;
+      } else if (templateData.elements) {
+        // Legacy single-side template - load to front side
+        this.cardData.front.elements = templateData.elements;
+        this.cardData.front.background_color = templateData.background_color;
+      }
+
+      if (templateData.card_width && templateData.card_height) {
+        this.canvas.setWidth(templateData.card_width);
+        this.canvas.setHeight(templateData.card_height);
+      }
+    } else {
+      // Try to load from localStorage
+      const savedState = localStorage.getItem('membershipcard_dual_template');
+      if (savedState) {
+        try {
+          const parsed = JSON.parse(savedState);
+          if (parsed.front_side) {
+            this.cardData = {
+              front: parsed.front_side,
+              back: parsed.back_side
+            };
+            this.isDualSided = parsed.is_dual_sided || false;
+          }
+
+          if (parsed.current_side) {
+            this.currentSide = parsed.current_side;
+          }
+        } catch (e) {
+          console.log('Could not load saved dual-side state:', e);
+        }
+      }
+    }
+
+    // Load current side
+    this.loadSideData();
+    this.updateSideToggleUI();
+    this.updateTokenRecommendations();
+  }
+
+  // Enhanced save template for dual-sided
+  saveTemplate() {
+    // Save current side before saving template
+    this.saveCurrentSideData();
+
+    const templateName = document.getElementById('template-name').value;
+    if (!templateName) {
+      alert('Please enter a template name');
+      return;
+    }
+
+    const templateData = {
+      id: document.getElementById('template-id').value,
+      name: templateName,
+      description: document.getElementById('template-description').value,
+      card_width: this.canvas.width,
+      card_height: this.canvas.height,
+      // Save both sides
+      front_elements: JSON.stringify(this.cardData.front.elements || {}),
+      back_elements: JSON.stringify(this.cardData.back.elements || {}),
+      front_background_color: this.cardData.front.background_color,
+      back_background_color: this.cardData.back.background_color,
+      front_background_image: this.cardData.front.background_image,
+      back_background_image: this.cardData.back.background_image,
+      is_dual_sided: this.isDualSided ? 1 : 0,
+      // Legacy support - save front side as main elements
+      elements: JSON.stringify(this.cardData.front.elements || {}),
+      background_color: this.cardData.front.background_color,
+      is_active: 1
+    };
+
+    console.log('Saving dual-sided template:', templateData);
+
+    // Save via API
+    if (typeof CRM !== 'undefined' && CRM.api3) {
+      CRM.api3('MembershipCardTemplate', 'create', templateData)
+        .done(function(result) {
+          CRM.alert('Template saved successfully!', 'Success', 'success');
+          //window.location.href = CRM.url('civicrm/membership-card-templates', {id: result.id});
+        })
+        .fail(function(error) {
+          CRM.alert('Error saving template: ' + error.error_message, 'Error', 'error');
+        });
+    } else {
+      console.log('Template would be saved:', templateData);
+      alert('Template saved successfully! (Demo mode)');
+    }
+  }
+
+  // Rest of the existing methods remain the same...
+  // (getDefaultTokens, initPropertyPanel, onObjectSelected, etc.)
+
   getDefaultTokens() {
-    // Default tokens if none provided
     return {
       contact: {
         display_name: 'Full Name',
@@ -309,7 +874,7 @@ class MembershipCardDesigner {
   }
 
   bindEvents() {
-    // Canvas drop support - FIXED VERSION
+    // Canvas drop support
     const canvasContainer = document.querySelector('.canvas-container');
     const canvas = this.canvas;
 
@@ -372,161 +937,8 @@ class MembershipCardDesigner {
         this.previewCard();
       });
     }
-
-    // Canvas size change events
-    const widthInput = document.getElementById('card-width');
-    const heightInput = document.getElementById('card-height');
-
-    if (widthInput) {
-      widthInput.addEventListener('change', (e) => {
-        const width = parseInt(e.target.value);
-        if (width >= 200 && width <= 800) {
-          this.setCanvasSize(width, this.canvas.height);
-        }
-      });
-    }
-
-    if (heightInput) {
-      heightInput.addEventListener('change', (e) => {
-        const height = parseInt(e.target.value);
-        if (height >= 100 && height <= 500) {
-          this.setCanvasSize(this.canvas.width, height);
-        }
-      });
-    }
-
-    // Background color change
-    const bgColorInput = document.getElementById('bg-color');
-    if (bgColorInput) {
-      bgColorInput.addEventListener('change', (e) => {
-        this.setBackgroundColor(e.target.value);
-      });
-    }
-
-    // Background image change
-    const bgImageInput = document.getElementById('bg-image');
-    if (bgImageInput) {
-      bgImageInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            this.setBackgroundImage(event.target.result);
-          };
-          reader.readAsDataURL(file);
-        }
-      });
-    }
   }
 
-  addText() {
-    const text = new fabric.Text('Sample Text', {
-      left: 50,
-      top: 50,
-      fontSize: 16,
-      fill: '#000000',
-      fontFamily: 'Arial'
-    });
-
-    this.canvas.add(text);
-    this.canvas.setActiveObject(text);
-    this.saveState();
-  }
-
-  addImage() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          fabric.Image.fromURL(event.target.result, (img) => {
-            img.set({
-              left: 50,
-              top: 50,
-              scaleX: 0.5,
-              scaleY: 0.5
-            });
-            this.canvas.add(img);
-            this.canvas.setActiveObject(img);
-            this.saveState();
-          });
-        };
-        reader.readAsDataURL(file);
-      }
-    };
-
-    input.click();
-  }
-
-  addQRCode() {
-    const qrCode = new fabric.Rect({
-      left: 50,
-      top: 50,
-      width: 80,
-      height: 80,
-      fill: '#000000',
-      stroke: '#cccccc',
-      strokeWidth: 1
-    });
-
-    const qrText = new fabric.Text('QR', {
-      left: 75,
-      top: 75,
-      fontSize: 12,
-      fill: '#ffffff',
-      fontFamily: 'Arial',
-      originX: 'center',
-      originY: 'center'
-    });
-
-    const group = new fabric.Group([qrCode, qrText], {
-      left: 50,
-      top: 50
-    });
-
-    group.set('elementType', 'qrcode');
-    this.canvas.add(group);
-    this.canvas.setActiveObject(group);
-    this.saveState();
-  }
-
-  addBarcode() {
-    const barcode = new fabric.Rect({
-      left: 50,
-      top: 50,
-      width: 120,
-      height: 40,
-      fill: '#000000',
-      stroke: '#cccccc',
-      strokeWidth: 1
-    });
-
-    const barcodeText = new fabric.Text('||||||||||', {
-      left: 110,
-      top: 70,
-      fontSize: 20,
-      fill: '#ffffff',
-      fontFamily: 'Courier New',
-      originX: 'center',
-      originY: 'center'
-    });
-
-    const group = new fabric.Group([barcode, barcodeText], {
-      left: 50,
-      top: 50
-    });
-
-    group.set('elementType', 'barcode');
-    this.canvas.add(group);
-    this.canvas.setActiveObject(group);
-    this.saveState();
-  }
-
-  // FIXED TOKEN FUNCTIONS
   addTokenToCanvas(token, x, y, tokenType = 'text') {
     console.log('Adding token to canvas:', token, 'at position:', x, y);
 
@@ -536,7 +948,8 @@ class MembershipCardDesigner {
         top: y,
         fontSize: 14,
         fill: '#000000',
-        fontFamily: 'Arial'
+        fontFamily: 'Arial',
+        cardSide: this.currentSide
       });
 
       // Store the original token for later replacement
@@ -656,86 +1069,6 @@ class MembershipCardDesigner {
     });
   }
 
-  saveState() {
-    // Auto-save canvas state
-    const canvasData = this.canvas.toJSON(['tokenValue', 'elementType', 'isToken']);
-    localStorage.setItem('membershipcard_canvas_state', JSON.stringify(canvasData));
-  }
-
-  loadTemplate() {
-    // Load template data if editing existing template
-    const templateData = window.templateData;
-    if (templateData && templateData.elements) {
-      this.canvas.loadFromJSON(templateData.elements, () => {
-        this.canvas.renderAll();
-      });
-
-      // Set canvas dimensions
-      if (templateData.card_width && templateData.card_height) {
-        this.canvas.setWidth(templateData.card_width);
-        this.canvas.setHeight(templateData.card_height);
-      }
-
-      // Set background
-      if (templateData.background_color) {
-        this.canvas.setBackgroundColor(templateData.background_color, this.canvas.renderAll.bind(this.canvas));
-      }
-    } else {
-      // Try to load from localStorage
-      const savedState = localStorage.getItem('membershipcard_canvas_state');
-      if (savedState) {
-        try {
-          const canvasData = JSON.parse(savedState);
-          this.canvas.loadFromJSON(canvasData, () => {
-            this.canvas.renderAll();
-          });
-        } catch (e) {
-          console.log('Could not load saved state:', e);
-        }
-      }
-    }
-  }
-
-  saveTemplate() {
-    const templateName = document.getElementById('template-name').value;
-    if (!templateName) {
-      alert('Please enter a template name');
-      return;
-    }
-
-    const canvasData = this.canvas.toJSON(['tokenValue', 'elementType', 'isToken']);
-
-    const templateData = {
-      id: document.getElementById('template-id').value,
-      name: templateName,
-      description: document.getElementById('template-description').value,
-      card_width: this.canvas.width,
-      card_height: this.canvas.height,
-      background_color: this.canvas.backgroundColor,
-      elements: JSON.stringify(canvasData),
-      is_active: 1
-    };
-
-    console.log('Saving template:', templateData);
-
-    // Check if CRM API is available
-    if (typeof CRM !== 'undefined' && CRM.api3) {
-      // Send AJAX request to save template
-      CRM.api3('MembershipCardTemplate', 'create', templateData)
-        .done(function(result) {
-          CRM.alert('Template saved successfully!', 'Success', 'success');
-          //window.location.href = CRM.url('civicrm/membership-card-templates', {id: result.id});
-        })
-        .fail(function(error) {
-          CRM.alert('Error saving template: ' + error.error_message, 'Error', 'error');
-        });
-    } else {
-      // Fallback for testing
-      console.log('Template would be saved:', templateData);
-      alert('Template saved successfully! (Demo mode)');
-    }
-  }
-
   previewCard() {
     // Generate preview with sample data
     const sampleData = {
@@ -758,8 +1091,7 @@ class MembershipCardDesigner {
   }
 
   renderCardWithData(data) {
-    // Clone canvas for preview
-    const canvasData = this.canvas.toJSON(['tokenValue', 'elementType', 'isToken']);
+    const canvasData = this.canvas.toJSON(['tokenValue', 'elementType', 'isToken', 'cardSide']);
 
     // Create temporary canvas for preview
     const tempCanvas = new fabric.Canvas();
@@ -771,17 +1103,7 @@ class MembershipCardDesigner {
       // Replace tokens with actual data
       tempCanvas.forEachObject((obj) => {
         if (obj.type === 'text' && (obj.tokenValue || obj.isToken)) {
-          const tokenPattern = /\{([^}]+)\}/g;
-          let text = obj.text;
-          let match;
-
-          while ((match = tokenPattern.exec(obj.text)) !== null) {
-            const token = match[1];
-            const value = data[token] || match[0]; // Keep original if no data
-            text = text.replace(match[0], value);
-          }
-
-          obj.set('text', text);
+          this.replaceTokensInText(obj, data);
         }
       });
 
@@ -796,6 +1118,34 @@ class MembershipCardDesigner {
     });
   }
 
+  replaceTokensInText(textObj, data = null) {
+    const sampleData = data || {
+      'contact.display_name': 'John Doe',
+      'contact.first_name': 'John',
+      'contact.last_name': 'Doe',
+      'contact.email': 'john.doe@example.com',
+      'membership.membership_type': 'Gold Membership',
+      'membership.status': 'Current',
+      'membership.start_date': '2024-01-01',
+      'membership.end_date': '2024-12-31',
+      'membership.membership_id': 'M12345',
+      'organization.organization_name': 'Example Organization',
+      'system.current_date': new Date().toLocaleDateString(),
+    };
+
+    const tokenPattern = /\{([^}]+)\}/g;
+    let text = textObj.text;
+    let match;
+
+    while ((match = tokenPattern.exec(textObj.text)) !== null) {
+      const token = match[1];
+      const value = sampleData[token] || match[0];
+      text = text.replace(match[0], value);
+    }
+
+    textObj.set('text', text);
+  }
+
   showPreviewModal(imageData) {
     const modal = document.createElement('div');
     modal.className = 'modal fade';
@@ -803,7 +1153,7 @@ class MembershipCardDesigner {
       <div class="modal-dialog modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h4 class="modal-title">Card Preview</h4>
+            <h4 class="modal-title">Card Preview - ${this.currentSide} Side</h4>
             <button type="button" class="close" data-dismiss="modal">&times;</button>
           </div>
           <div class="modal-body text-center">
@@ -826,14 +1176,6 @@ class MembershipCardDesigner {
       $(modal).on('hidden.bs.modal', function() {
         document.body.removeChild(modal);
       });
-    } else {
-      modal.style.display = 'block';
-      modal.querySelector('.close').onclick = () => {
-        document.body.removeChild(modal);
-      };
-      modal.querySelector('[data-dismiss="modal"]').onclick = () => {
-        document.body.removeChild(modal);
-      };
     }
   }
 
@@ -846,6 +1188,7 @@ class MembershipCardDesigner {
 
   setBackgroundColor(color) {
     this.canvas.setBackgroundColor(color, this.canvas.renderAll.bind(this.canvas));
+    this.cardData[this.currentSide].background_color = color;
     this.saveState();
   }
 
@@ -859,6 +1202,7 @@ class MembershipCardDesigner {
       });
 
       this.canvas.setBackgroundImage(img, this.canvas.renderAll.bind(this.canvas));
+      this.cardData[this.currentSide].background_image = imageUrl;
       this.saveState();
     });
   }
@@ -868,12 +1212,40 @@ class MembershipCardDesigner {
 
     // Create download link
     const link = document.createElement('a');
-    link.download = `membership-card.${format}`;
+    link.download = `membership-card-${this.currentSide}.${format}`;
     link.href = dataURL;
     link.click();
   }
+
+  createSideToggleToolbar() {
+
+  }
+  removeSideToggleToolbar() {
+
+  }
 }
 
+function addIcon(iconType) {
+  if (!window.cardDesigner) return;
+
+  const icons = {
+    'phone': '📞',
+    'envelope': '✉️',
+    'home': '🏠',
+    'globe': '🌍'
+  };
+
+  const text = new fabric.Text(icons[iconType] || '⭐', {
+    left: 50,
+    top: 50,
+    fontSize: 24,
+    cardSide: window.cardDesigner.currentSide
+  });
+
+  window.cardDesigner.canvas.add(text);
+  window.cardDesigner.canvas.setActiveObject(text);
+  window.cardDesigner.saveState();
+}
 // Global functions for layer management
 function bringToFront() {
   if (window.cardDesigner && window.cardDesigner.selectedElement) {
@@ -898,6 +1270,7 @@ function duplicateElement() {
       cloned.set({
         left: cloned.left + 10,
         top: cloned.top + 10,
+        cardSide: window.cardDesigner.currentSide
       });
       window.cardDesigner.canvas.add(cloned);
       window.cardDesigner.canvas.setActiveObject(cloned);
@@ -913,13 +1286,42 @@ function exportCard(format = 'png') {
   }
 }
 
+// Global function for downloading both sides
+function downloadBothSides(frontData, backData) {
+  if (typeof JSZip !== 'undefined') {
+    const zip = new JSZip();
+    zip.file('membership-card-front.png', frontData.split(',')[1], {base64: true});
+    zip.file('membership-card-back.png', backData.split(',')[1], {base64: true});
+
+    zip.generateAsync({type: 'blob'}).then(function(content) {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = 'membership-card-both-sides.zip';
+      link.click();
+    });
+  } else {
+    // Fallback - download separately
+    const link = document.createElement('a');
+    link.href = frontData;
+    link.download = 'membership-card-front.png';
+    link.click();
+
+    setTimeout(() => {
+      const link2 = document.createElement('a');
+      link2.href = backData;
+      link2.download = 'membership-card-back.png';
+      link2.click();
+    }, 1000);
+  }
+}
+
 // Initialize designer when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
   if (document.getElementById('card-canvas')) {
     // Ensure Fabric.js is loaded
     if (typeof fabric !== 'undefined') {
       window.cardDesigner = new MembershipCardDesigner();
-      console.log('Card Designer initialized successfully');
+      console.log('Dual-Sided Card Designer initialized successfully');
     } else {
       console.error('Fabric.js not loaded. Please include Fabric.js library.');
 
@@ -935,148 +1337,3 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Debug function to test token functionality
-function testTokens() {
-  console.log('Testing token functionality...');
-
-  if (window.cardDesigner) {
-    // Test adding a token programmatically
-    window.cardDesigner.addTokenToCanvas('{contact.display_name}', 100, 100);
-    console.log('Test token added successfully');
-  } else {
-    console.error('Card Designer not initialized');
-  }
-}
-
-// Enhanced token replacement function for actual card generation
-class MembershipCardGenerator {
-  static generateCard(membershipId, templateId) {
-    return new Promise((resolve, reject) => {
-      // Get membership data
-      if (typeof CRM !== 'undefined' && CRM.api3) {
-        CRM.api3('Membership', 'get', {
-          sequential: 1,
-          id: membershipId,
-          api: {
-            Contact: ['get', {id: '$value.contact_id'}],
-            MembershipType: ['get', {id: '$value.membership_type_id'}]
-          }
-        }).done(function (membershipResult) {
-          if (membershipResult.values.length === 0) {
-            reject('Membership not found');
-            return;
-          }
-
-          const membership = membershipResult.values[0];
-          const contact = membership['api.Contact.get'].values[0];
-          const membershipType = membership['api.MembershipType.get'].values[0];
-
-          // Get template
-          CRM.api3('MembershipCardTemplate', 'get', {
-            sequential: 1,
-            id: templateId
-          }).done(function (templateResult) {
-            if (templateResult.values.length === 0) {
-              reject('Template not found');
-              return;
-            }
-
-            const template = templateResult.values[0];
-            const cardData = MembershipCardGenerator.processTemplate(template, contact, membership, membershipType);
-
-            resolve(cardData);
-          }).fail(function (error) {
-            reject(error.error_message);
-          });
-
-        }).fail(function (error) {
-          reject(error.error_message);
-        });
-      } else {
-        // Mock data for testing
-        const mockData = {
-          contact: {display_name: 'John Doe', first_name: 'John', last_name: 'Doe', email: 'john@example.com'},
-          membership: {
-            membership_type: 'Gold',
-            status: 'Current',
-            start_date: '2024-01-01',
-            end_date: '2024-12-31',
-            id: '12345'
-          },
-          membershipType: {name: 'Gold Membership'}
-        };
-
-        setTimeout(() => {
-          resolve(MembershipCardGenerator.processTemplate({}, mockData.contact, mockData.membership, mockData.membershipType));
-        }, 100);
-      }
-    });
-  }
-
-  static processTemplate(template, contact, membership, membershipType) {
-    const tokenData = {
-      'contact.display_name': contact.display_name,
-      'contact.first_name': contact.first_name,
-      'contact.last_name': contact.last_name,
-      'contact.email': contact.email,
-      'contact.phone': contact.phone,
-      'contact.street_address': contact.street_address,
-      'contact.city': contact.city,
-      'contact.state_province': contact.state_province_name,
-      'contact.postal_code': contact.postal_code,
-      'contact.image_URL': contact.image_URL,
-      'membership.membership_type': membershipType.name,
-      'membership.status': membership.status_id,
-      'membership.start_date': membership.start_date,
-      'membership.end_date': membership.end_date,
-      'membership.join_date': membership.join_date,
-      'membership.membership_id': membership.id,
-      'membership.source': membership.source,
-      'system.current_date': new Date().toLocaleDateString(),
-      'system.qr_code': `MEMBER:${membership.id}`,
-      'system.barcode': membership.id.toString().padStart(12, '0')
-    };
-
-    // Process template elements
-    const elements = template.elements ? JSON.parse(template.elements) : {};
-
-    // Replace tokens in text elements
-    if (elements.objects) {
-      elements.objects.forEach(obj => {
-        if (obj.type === 'text' && (obj.tokenValue || obj.isToken)) {
-          const tokenPattern = /\{([^}]+)\}/g;
-          let text = obj.text;
-          let match;
-
-          while ((match = tokenPattern.exec(obj.text)) !== null) {
-            const token = match[1];
-            const value = tokenData[token] || match[0];
-            text = text.replace(match[0], value);
-          }
-
-          obj.text = text;
-        }
-      });
-    }
-
-    return {
-      template: template,
-      elements: elements,
-      tokenData: tokenData,
-      membership: membership,
-      contact: contact
-    };
-  }
-
-  static generateQRCode(data) {
-    // This would integrate with a QR code library
-    // For now, return placeholder
-    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
-  }
-
-  static generateBarcode(data) {
-    // This would integrate with a barcode library
-    // For now, return placeholder
-    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
-  }
-}

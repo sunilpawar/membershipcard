@@ -17,7 +17,7 @@ class CRM_Membershipcard_API_MembershipCardTemplate {
       }
     }
 
-    $template = new CRM_Membershipcard_DAO_Template();
+    $template = new CRM_Membershipcard_DAO_MembershipCardTemplate();
 
     if (!empty($params['id'])) {
       $template->id = $params['id'];
@@ -32,8 +32,15 @@ class CRM_Membershipcard_API_MembershipCardTemplate {
     $template->card_width = CRM_Utils_Array::value('card_width', $params, 350);
     $template->card_height = CRM_Utils_Array::value('card_height', $params, 220);
     $template->background_color = CRM_Utils_Array::value('background_color', $params, '#ffffff');
+    $template->front_background_color = CRM_Utils_Array::value('front_background_color', $params, '#ffffff');
+    $template->back_background_color = CRM_Utils_Array::value('back_background_color', $params, '#ffffff');
     $template->background_image = CRM_Utils_Array::value('background_image', $params);
+    $template->front_background_image = CRM_Utils_Array::value('front_background_image', $params);
+    $template->back_background_image = CRM_Utils_Array::value('back_background_image', $params);
     $template->elements = $params['elements'];
+    $template->front_elements = $params['front_elements'];
+    $template->back_elements = $params['back_elements'];
+    $template->is_dual_sided = CRM_Utils_Array::value('is_dual_sided', $params, 0);
     $template->is_active = CRM_Utils_Array::value('is_active', $params, 1);
 
     if (empty($template->id)) {
@@ -54,7 +61,7 @@ class CRM_Membershipcard_API_MembershipCardTemplate {
    * Get membership card templates
    */
   public static function get($params) {
-    $template = new CRM_Membershipcard_DAO_Template();
+    $template = new CRM_Membershipcard_DAO_MembershipCardTemplate();
 
     if (!empty($params['id'])) {
       $template->id = $params['id'];
@@ -94,7 +101,7 @@ class CRM_Membershipcard_API_MembershipCardTemplate {
       throw new API_Exception("Missing required field: id");
     }
 
-    $template = new CRM_Membershipcard_DAO_Template();
+    $template = new CRM_Membershipcard_DAO_MembershipCardTemplate();
     $template->id = $params['id'];
 
     if (!$template->find(TRUE)) {

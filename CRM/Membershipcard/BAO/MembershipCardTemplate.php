@@ -26,6 +26,8 @@ class CRM_Membershipcard_BAO_MembershipCardTemplate extends CRM_Membershipcard_D
     if ($template->find(TRUE)) {
       if ($jsonDecode) {
         $template->elements = json_decode($template->elements, TRUE);
+        $template->front_elements = json_decode($template->front_elements, TRUE);
+        $template->back_elements = json_decode($template->back_elements, TRUE);
       }
       return $template;
     }
