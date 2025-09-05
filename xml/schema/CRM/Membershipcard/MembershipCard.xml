@@ -46,9 +46,24 @@
   </foreignKey>
 
   <field>
-    <name>card_data</name>
-    <title>Card Data</title>
-    <comment>Generated card data</comment>
+    <name>front_card_data</name>
+    <title>Front Card Data</title>
+    <comment>Generated card data for front</comment>
+    <type>longtext</type>
+    <required>false</required>
+    <export>true</export>
+    <import>true</import>
+    <html>
+      <type>TextArea</type>
+      <rows>4</rows>
+      <cols>60</cols>
+    </html>
+  </field>
+
+  <field>
+    <name>back_card_data</name>
+    <title>Back Card Data</title>
+    <comment>Generated card data for back</comment>
     <type>longtext</type>
     <required>false</required>
     <export>true</export>

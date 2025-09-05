@@ -44,13 +44,15 @@ class CRM_Membershipcard_API_MembershipCard {
     $template = $template['values'][0];
 
     // Generate card data
-    $cardData = self::processTemplate($template, $contact, $membership, $membershipType);
+    $cardDataFront = self::processTemplate($template, $contact, $membership, $membershipType, TRUE);
+    $cardDataBack = self::processTemplate($template, $contact, $membership, $membershipType, FALSE);
 
     // Save card record
     $card = new CRM_Membershipcard_DAO_Card();
     $card->membership_id = $params['membership_id'];
     $card->template_id = $params['template_id'];
-    $card->card_data = json_encode($cardData);
+    $card->front_card_data = json_encode($cardDataFront);
+    $card->back_card_data = json_encode($cardDataBack);
     $card->qr_code = self::generateQRCode($membership);
     $card->barcode = self::generateBarcode($membership);
     $card->created_date = date('Y-m-d H:i:s');
@@ -68,7 +70,7 @@ class CRM_Membershipcard_API_MembershipCard {
   /**
    * Process template with actual data
    */
-  private static function processTemplate($template, $contact, $membership, $membershipType) {
+  private static function processTemplate($template, $contact, $membership, $membershipType, $isFront = TRUE) {
     // Prepare token data
     $tokenData = [
       '{contact.display_name}' => $contact['display_name'],
@@ -95,8 +97,12 @@ class CRM_Membershipcard_API_MembershipCard {
     ];
 
     // Process template elements
-    $elements = json_decode($template['elements'], TRUE);
-
+    if ($isFront) {
+      $elements = json_decode($template['front_elements'], TRUE);
+    }
+    else {
+      $elements = json_decode($template['back_elements'], TRUE);
+    }
     if (!empty($elements['objects'])) {
       foreach ($elements['objects'] as &$obj) {
         if ($obj['type'] === 'text' && !empty($obj['text'])) {
@@ -144,7 +150,7 @@ class CRM_Membershipcard_API_MembershipCard {
   /**
    * Get membership cards for a contact
    */
-  public static function getByContact($params) {
+  public static function getByContactOld($params) {
     if (empty($params['contact_id'])) {
       throw new API_Exception("Missing required field: contact_id");
     }
@@ -261,11 +267,11 @@ class CRM_Membershipcard_API_MembershipCard {
   private static function getTemplateWithSides($templateId) {
     $sql = "
     SELECT t.*,
-           COALESCE(t.front_elements, t.elements) as front_elements,
+           t.front_elements,
            t.back_elements,
-           COALESCE(t.front_background_color, t.background_color, '#ffffff') as front_background_color,
+           COALESCE(t.front_background_color, '#ffffff') as front_background_color,
            COALESCE(t.back_background_color, '#ffffff') as back_background_color,
-           COALESCE(t.front_background_image, t.background_image) as front_background_image,
+           t.front_background_image,
            t.back_background_image
     FROM civicrm_membership_card_template t
     WHERE t.id = %1 AND t.is_active = 1
@@ -405,7 +411,7 @@ class CRM_Membershipcard_API_MembershipCard {
   }
 
   private static function saveCardRecord($params, $cardData, $qrCodes, $barcodes) {
-    $card = new CRM_Membershipcard_DAO_Card();
+    $card = new CRM_Membershipcard_DAO_MembershipCard();
 
     // Check if card already exists
     $existingCard = CRM_Core_DAO::executeQuery("
@@ -430,10 +436,10 @@ class CRM_Membershipcard_API_MembershipCard {
         $card->front_card_data = json_encode($cardData['front_data']);
       }
       if (property_exists($card, 'front_qr_code')) {
-        $card->front_qr_code = json_encode($qrCodes['front'] ?? null);
+        $card->front_qr_code = json_encode($qrCodes['front'] ?? NULL);
       }
       if (property_exists($card, 'front_barcode')) {
-        $card->front_barcode = json_encode($barcodes['front'] ?? null);
+        $card->front_barcode = json_encode($barcodes['front'] ?? NULL);
       }
     }
 
@@ -442,15 +448,16 @@ class CRM_Membershipcard_API_MembershipCard {
         $card->back_card_data = json_encode($cardData['back_data']);
       }
       if (property_exists($card, 'back_qr_code')) {
-        $card->back_qr_code = json_encode($qrCodes['back'] ?? null);
+        $card->back_qr_code = json_encode($qrCodes['back'] ?? NULL);
       }
       if (property_exists($card, 'back_barcode')) {
-        $card->back_barcode = json_encode($barcodes['back'] ?? null);
+        $card->back_barcode = json_encode($barcodes['back'] ?? NULL);
       }
     }
 
     // Legacy fields for backward compatibility
-    $card->card_data = json_encode($cardData['front_data'] ?? $cardData['back_data'] ?? []);
+    $card->front_card_data = json_encode($cardData['front_data'] ?? []);
+    $card->back_card_data = json_encode($cardData['back_data'] ?? []);
     $card->qr_code = json_encode($qrCodes['front'] ?? $qrCodes['back'] ?? []);
     $card->barcode = json_encode($barcodes['front'] ?? $barcodes['back'] ?? []);
 
@@ -520,7 +527,7 @@ class CRM_Membershipcard_API_MembershipCard {
   /**
    * Enhanced getByContact method to include dual-sided information
    */
-  public static function getByContact2($params) {
+  public static function getByContact($params) {
     if (empty($params['contact_id'])) {
       throw new API_Exception("Missing required field: contact_id");
     }
