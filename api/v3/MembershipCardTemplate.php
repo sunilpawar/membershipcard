@@ -26,13 +26,13 @@ function civicrm_api3_membership_card_template_create($params) {
       'description' => CRM_Utils_Array::value('description', $params),
       'card_width' => CRM_Utils_Array::value('card_width', $params, 350),
       'card_height' => CRM_Utils_Array::value('card_height', $params, 220),
-      'background_color' => CRM_Utils_Array::value('background_color', $params, '#ffffff'),
+      //'background_color' => CRM_Utils_Array::value('background_color',$params, '#ffffff'),
       'front_background_color' => CRM_Utils_Array::value('front_background_color', $params, '#ffffff'),
       'back_background_color' => CRM_Utils_Array::value('back_background_color', $params, '#ffffff'),
-      'background_image' => CRM_Utils_Array::value('background_image', $params),
+      // 'background_image' => CRM_Utils_Array::value('background_image',$params),
       'front_background_image' => CRM_Utils_Array::value('front_background_image', $params),
       'back_background_image' => CRM_Utils_Array::value('back_background_image', $params),
-      'elements' => CRM_Utils_Array::value('elements', $params, '{}'),
+      // 'elements' => CRM_Utils_Array::value('elements', $params, '{}'),
       'front_elements' => CRM_Utils_Array::value('front_elements', $params, '{}'),
       'back_elements' => CRM_Utils_Array::value('back_elements', $params, '{}'),
       'is_active' => CRM_Utils_Array::value('is_active', $params, 1),
@@ -58,11 +58,11 @@ function civicrm_api3_membership_card_template_create($params) {
     }
 
     // Validate elements JSON
-    if (!empty($templateData['elements']) && !is_string($templateData['elements'])) {
+    if (FALSE && !empty($templateData['elements']) && !is_string($templateData['elements'])) {
       $templateData['elements'] = json_encode($templateData['elements']);
     }
 
-    if (!empty($templateData['elements'])) {
+    if (FALSE && !empty($templateData['elements'])) {
       $decoded = json_decode($templateData['elements'], TRUE);
       if (json_last_error() !== JSON_ERROR_NONE) {
         throw new API_Exception("Invalid JSON in elements field");
@@ -98,7 +98,7 @@ function civicrm_api3_membership_card_template_create($params) {
     }
 
     // Validate background color
-    if (!preg_match('/^#[a-fA-F0-9]{6}$/', $templateData['background_color'])) {
+    if (FALSE && !preg_match('/^#[a-fA-F0-9]{6}$/', $templateData['background_color'])) {
       throw new API_Exception("Invalid background color format");
     }
 

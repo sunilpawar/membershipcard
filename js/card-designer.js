@@ -171,6 +171,9 @@ class MembershipCardDesigner {
     // Update token recommendations
     this.updateTokenRecommendations();
 
+    // Dispatch side change event
+    this.dispatchSideChangeEvent();
+
     console.log(`Switched to ${side} side`);
   }
 
@@ -187,6 +190,7 @@ class MembershipCardDesigner {
     // Update indicator text
     const sideText = this.currentSide === 'front' ? 'Front Side' : 'Back Side';
     document.querySelector('.current-side-text').innerHTML = `Currently editing: <strong>${sideText}</strong>`;
+    document.querySelector('#canvas-side-text').innerHTML = sideText;
 
     // Update canvas background for current side
     const bgColor = this.cardData[this.currentSide].background_color || '#ffffff';
@@ -612,20 +616,55 @@ class MembershipCardDesigner {
     const templateData = window.templateData;
 
     if (templateData) {
+      // Parse JSON strings if they exist
+      try {
+        if (templateData.front_elements && typeof templateData.front_elements === 'string') {
+          templateData.front_elements = JSON.parse(templateData.front_elements);
+        }
+        if (templateData.back_elements && typeof templateData.back_elements === 'string') {
+          templateData.back_elements = JSON.parse(templateData.back_elements);
+        }
+        if (templateData.elements && typeof templateData.elements === 'string') {
+          templateData.elements = JSON.parse(templateData.elements);
+        }
+      } catch (e) {
+        console.log('Error parsing template data:', e);
+      }
+
       // Check if it's a dual-sided template
-      if (templateData.front_side || templateData.back_side || templateData.is_dual_sided) {
-        this.isDualSided = true;
-        this.cardData.front = templateData.front_side || this.cardData.front;
-        this.cardData.back = templateData.back_side || this.cardData.back;
+      if (templateData.is_dual_sided || templateData.front_elements || templateData.back_elements) {
+        this.isDualSided = templateData.is_dual_sided || false;
+
+        // Load front side data
+        this.cardData.front.elements = templateData.front_elements || templateData.elements;
+        this.cardData.front.background_color = templateData.front_background_color || templateData.background_color || '#ffffff';
+        this.cardData.front.background_image = templateData.front_background_image;
+
+        // Load back side data
+        this.cardData.back.elements = templateData.back_elements;
+        this.cardData.back.background_color = templateData.back_background_color || '#ffffff';
+        this.cardData.back.background_image = templateData.back_background_image;
+
+        // Enable dual-sided toggle if applicable
+        const dualSidedToggle = document.getElementById('is-dual-sided');
+        if (dualSidedToggle) {
+          dualSidedToggle.checked = this.isDualSided;
+        }
       } else if (templateData.elements) {
         // Legacy single-side template - load to front side
         this.cardData.front.elements = templateData.elements;
-        this.cardData.front.background_color = templateData.background_color;
+        this.cardData.front.background_color = templateData.background_color || '#ffffff';
       }
 
       if (templateData.card_width && templateData.card_height) {
         this.canvas.setWidth(templateData.card_width);
         this.canvas.setHeight(templateData.card_height);
+
+        // Update dimension display
+        const dimensionsEl = document.getElementById('canvas-dimensions');
+        if (dimensionsEl) {
+          dimensionsEl.textContent = `${templateData.card_width}×${templateData.card_height}px`;
+        }
       }
     } else {
       // Try to load from localStorage
@@ -648,6 +687,11 @@ class MembershipCardDesigner {
           console.log('Could not load saved dual-side state:', e);
         }
       }
+    }
+
+    // Initialize dual-sided UI if needed
+    if (this.isDualSided) {
+      this.createSideToggleToolbar();
     }
 
     // Load current side
@@ -1217,11 +1261,77 @@ class MembershipCardDesigner {
     link.click();
   }
 
-  createSideToggleToolbar() {
-
+  // Additional methods for dual-sided functionality
+  updateCardDimensions(width, height) {
+    if (width) {
+      this.canvas.setWidth(parseInt(width));
+      document.getElementById('canvas-dimensions').textContent = `${width}×${this.canvas.height}px`;
+    }
+    if (height) {
+      this.canvas.setHeight(parseInt(height));
+      document.getElementById('canvas-dimensions').textContent = `${this.canvas.width}×${height}px`;
+    }
+    this.canvas.renderAll();
+    this.saveState();
   }
-  removeSideToggleToolbar() {
 
+  updateBackgroundColor(side, color) {
+    this.cardData[side].background_color = color;
+    if (side === this.currentSide) {
+      this.canvas.setBackgroundColor(color, this.canvas.renderAll.bind(this.canvas));
+    }
+    this.saveState();
+  }
+
+  updateBackgroundImage(side, file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imageUrl = event.target.result;
+      this.cardData[side].background_image = imageUrl;
+
+      if (side === this.currentSide) {
+        this.setBackgroundImage(imageUrl);
+      }
+      this.saveState();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  dispatchSideChangeEvent() {
+    const event = new CustomEvent('sideChanged', {
+      detail: { currentSide: this.currentSide }
+    });
+    document.dispatchEvent(event);
+  }
+
+  createSideToggleToolbar() {
+    if (document.querySelector('.side-toggle-toolbar')) return;
+
+    const toolbar = document.getElementById('card-toolbar');
+    const sideToggleDiv = document.createElement('div');
+    sideToggleDiv.className = 'side-toggle-toolbar';
+    sideToggleDiv.innerHTML = `
+      <button type="button" class="side-toggle-btn active" data-side="front">
+        <i class="fa fa-credit-card"></i> Front
+      </button>
+      <button type="button" class="side-toggle-btn" data-side="back">
+        <i class="fa fa-credit-card fa-flip-horizontal"></i> Back
+      </button>
+    `;
+
+    toolbar.insertBefore(sideToggleDiv, toolbar.firstChild);
+
+    // Bind events
+    sideToggleDiv.querySelectorAll('.side-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.switchSide(btn.dataset.side));
+    });
+  }
+
+  removeSideToggleToolbar() {
+    const existing = document.querySelector('.side-toggle-toolbar');
+    if (existing) {
+      existing.remove();
+    }
   }
 }
 

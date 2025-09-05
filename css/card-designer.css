@@ -1,25 +1,32 @@
 /* Membership Card Designer Styles */
 
 .card-designer-container {
-  display: grid;
-  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 80vh;
   background-color: #f8f9fa;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .toolbar-section {
   background: #ffffff;
   border-bottom: 1px solid #dee2e6;
-  padding: 15px;
+  padding: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  width: 15%;
   overflow: auto;
 }
 
 .card-toolbar {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-  margin-bottom: 15px;
+  margin: 15px 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  min-height: 50px;
 }
 
 .card-toolbar .btn {
@@ -844,20 +851,7 @@
   }
 }
 
-.card-designer-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 80vh;
-  background: #f8f9fa;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.toolbar-section {
-  background: white;
-  padding: 20px;
-  border-bottom: 1px solid #dee2e6;
-}
+/* Duplicate removed - using earlier definition */
 
 .template-info h3 {
   margin-bottom: 20px;

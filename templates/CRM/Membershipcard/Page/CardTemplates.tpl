@@ -572,7 +572,7 @@
             cardSide: window.cardDesigner.currentSide
           });
           window.cardDesigner.canvas.add(rect);
-          window.cardDesigner.canvas.setActiveObject(cloned);
+          window.cardDesigner.canvas.setActiveObject(rect);
           break;
 
         case 'circle':
