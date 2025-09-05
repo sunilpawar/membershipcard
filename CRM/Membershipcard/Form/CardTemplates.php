@@ -9,8 +9,29 @@ class CRM_Membershipcard_Form_CardTemplates extends CRM_Core_Form {
 
   protected $_id;
 
+  protected $_templateCard;
+
   public function preProcess() {
     $this->_id = CRM_Utils_Request::retrieve('id', 'Positive', $this);
+    // Load existing template data if editing
+    if ($this->_id) {
+      try {
+        $this->_templateCard = CRM_Membershipcard_BAO_MembershipCardTemplate::getTemplateById($this->_id);
+        if (!$this->_templateCard) {
+          CRM_Core_Error::statusBounce(ts('Template not found.'));
+        }
+
+        // Set page title for editing
+        CRM_Utils_System::setTitle(ts('Edit Template: %1', [1 => $this->_templateCard->name]));
+        $this->assign('action', CRM_Core_Action::UPDATE);
+      } catch (Exception $e) {
+        CRM_Core_Error::statusBounce(ts('Error loading template: %1', [1 => $e->getMessage()]));
+      }
+    } else {
+      // Set page title for new template
+      CRM_Utils_System::setTitle(ts('Add New Membership Card Template'));
+      $this->assign('action', CRM_Core_Action::ADD);
+    }
     parent::preProcess();
   }
 
@@ -35,6 +56,33 @@ class CRM_Membershipcard_Form_CardTemplates extends CRM_Core_Form {
         'name' => ts('Cancel'),
       ],
     ]);
+    if ($this->_id && $this->_templateCard) {
+      $this->setDefaultValues();
+    }
+    $this->assign('template', $this->getTemplateForJS());
+    $this->assign('tokens', membershipcard_get_tokens());
+  }
+
+  /**
+   * Set default values for form fields when editing
+   */
+  public function setDefaultValues() {
+
+    if (!$this->_templateCard) {
+      return [];
+    }
+
+    $defaults = [
+      'name' => $this->_templateCard->name,
+      'description' => $this->_templateCard->description,
+      'card_width' => $this->_templateCard->card_width ?: 350,
+      'card_height' => $this->_templateCard->card_height ?: 220,
+      'background_color' => $this->_templateCard->background_color ?: '#ffffff',
+      'background_image' => $this->_templateCard->background_image,
+      'elements' => $this->_templateCard->elements ?: '{}',
+      'is_active' => $this->_templateCard->is_active,
+    ];
+    return $defaults;
   }
 
   public function postProcess() {

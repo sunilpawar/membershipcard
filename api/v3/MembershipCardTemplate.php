@@ -45,7 +45,8 @@ function civicrm_api3_membership_card_template_create($params) {
       if (!$existingTemplate->fetch()) {
         throw new API_Exception("Template with ID {$params['id']} not found");
       }
-    } else {
+    }
+    else {
       $templateData['created_date'] = date('Y-m-d H:i:s');
     }
 
@@ -75,64 +76,16 @@ function civicrm_api3_membership_card_template_create($params) {
     }
 
     // Save to database
-    if (!empty($templateData['id'])) {
-      // Update existing template
-      $sql = "
-        UPDATE civicrm_membership_card_template
-        SET name = %1, description = %2, card_width = %3, card_height = %4,
-            background_color = %5, background_image = %6, elements = %7,
-            is_active = %8, modified_date = %9
-        WHERE id = %10
-      ";
-      $sqlParams = [
-        1 => [$templateData['name'], 'String'],
-        2 => [$templateData['description'], 'String'],
-        3 => [$templateData['card_width'], 'Integer'],
-        4 => [$templateData['card_height'], 'Integer'],
-        5 => [$templateData['background_color'], 'String'],
-        6 => [$templateData['background_image'], 'String'],
-        7 => [$templateData['elements'], 'String'],
-        8 => [$templateData['is_active'], 'Integer'],
-        9 => [$templateData['modified_date'], 'String'],
-        10 => [$templateData['id'], 'Integer'],
-      ];
-
-      CRM_Core_DAO::executeQuery($sql, $sqlParams);
-      $templateId = $templateData['id'];
-    } else {
-      $cardTemplate = CRM_Membershipcard_BAO_MembershipCardTemplate::create($templateData);
-      $templateId = $cardTemplate->id;
-      // Create new template
-      /*
-      $sql = "
-        INSERT INTO civicrm_membership_card_template
-        (name, description, card_width, card_height, background_color,
-         background_image, elements, is_active, created_date, modified_date)
-        VALUES (%1, %2, %3, %4, %5, %6, %7, %8, %9, %10)
-      ";
-      $sqlParams = [
-        1 => [$templateData['name'], 'String'],
-        2 => [$templateData['description'], 'String'],
-        3 => [$templateData['card_width'], 'Integer'],
-        4 => [$templateData['card_height'], 'Integer'],
-        5 => [$templateData['background_color'], 'String'],
-        6 => [$templateData['background_image'], 'String'],
-        7 => [$templateData['elements'], 'String'],
-        8 => [$templateData['is_active'], 'Integer'],
-        9 => [$templateData['created_date'], 'String'],
-        10 => [$templateData['modified_date'], 'String'],
-      ];
-      CRM_Core_DAO::executeQuery($sql, $sqlParams);
-      $templateId = CRM_Core_DAO::singleValueQuery('SELECT LAST_INSERT_ID()');
-      */
-    }
+    $cardTemplate = CRM_Membershipcard_BAO_MembershipCardTemplate::create($templateData);
+    $templateId = $cardTemplate->id;
 
     // Return created/updated template
     $result = civicrm_api3('MembershipCardTemplate', 'getsingle', ['id' => $templateId]);
 
     return civicrm_api3_create_success([$result], $params, 'MembershipCardTemplate', 'create');
 
-  } catch (Exception $e) {
+  }
+  catch (Exception $e) {
     throw new API_Exception('Error creating/updating template: ' . $e->getMessage());
   }
 }
@@ -260,8 +213,8 @@ function civicrm_api3_membership_card_template_get($params) {
     } else {
       $count = count($results);
     }
-
-    return civicrm_api3_create_success($results, $params, 'MembershipCardTemplate', 'get', NULL, [
+    $dao = NULL;
+    return civicrm_api3_create_success($results, $params, 'MembershipCardTemplate', 'get', $dao, [
       'count' => $count,
     ]);
 

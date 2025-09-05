@@ -25,7 +25,7 @@ class CRM_Membershipcard_Page_CardTemplates extends CRM_Core_Page {
     if ($this->_action & (CRM_Core_Action::UPDATE | CRM_Core_Action::ADD)) {
       //$this->edit();
       //$this->showDesigner($this->_id);
-      $this->showDesigner($templateId);
+      $this->showDesigner($this->_id);
     }
     else {
       $this->showTemplateList();
@@ -33,6 +33,7 @@ class CRM_Membershipcard_Page_CardTemplates extends CRM_Core_Page {
 
     parent::run();
   }
+
   public function edit() {
     if ($this->_action & CRM_Core_Action::UPDATE) {
       $title = ts('Update Card Template');
@@ -72,17 +73,9 @@ class CRM_Membershipcard_Page_CardTemplates extends CRM_Core_Page {
 
   private function showDesigner($templateId = NULL) {
     $template = NULL;
-
     if ($templateId) {
-      $template = CRM_Core_DAO::executeQuery("
-        SELECT * FROM civicrm_membership_card_template
-        WHERE id = %1
-      ", [1 => [$templateId, 'Integer']]);
-
-      if ($template->fetch()) {
-        $template = (array)$template;
-        $template['elements'] = json_decode($template['elements'], TRUE);
-      }
+      $template = CRM_Membershipcard_BAO_MembershipCardTemplate::getTemplateById($templateId, TRUE);
+      $template = (array)$template;
     }
 
     // Get available tokens

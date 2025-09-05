@@ -20,10 +20,13 @@ class CRM_Membershipcard_BAO_MembershipCardTemplate extends CRM_Membershipcard_D
     return $template;
   }
 
-  public static function getTemplateById($id) {
+  public static function getTemplateById($id, $jsonDecode = FALSE) {
     $template = new self();
     $template->id = $id;
     if ($template->find(TRUE)) {
+      if ($jsonDecode) {
+        $template->elements = json_decode($template->elements, TRUE);
+      }
       return $template;
     }
     return NULL;
@@ -65,5 +68,5 @@ class CRM_Membershipcard_BAO_MembershipCardTemplate extends CRM_Membershipcard_D
     return NULL;
   }
 
-  
+
 }

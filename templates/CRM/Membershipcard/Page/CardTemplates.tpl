@@ -10,6 +10,7 @@
             <div class="col-md-6">
               <div class="form-group">
                 <label for="template-name">{ts}Template Name{/ts}:</label>
+                <input type="hidden" id="template-id" value="{$template.id|default:''}">
                 <input type="text" id="template-name" class="form-control"
                        placeholder="{ts}Enter template name{/ts}"
                        value="{$template.name|default:''}" required>

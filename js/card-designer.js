@@ -706,6 +706,7 @@ class MembershipCardDesigner {
     const canvasData = this.canvas.toJSON(['tokenValue', 'elementType', 'isToken']);
 
     const templateData = {
+      id: document.getElementById('template-id').value,
       name: templateName,
       description: document.getElementById('template-description').value,
       card_width: this.canvas.width,
@@ -723,7 +724,7 @@ class MembershipCardDesigner {
       CRM.api3('MembershipCardTemplate', 'create', templateData)
         .done(function(result) {
           CRM.alert('Template saved successfully!', 'Success', 'success');
-          window.location.href = CRM.url('civicrm/membership-card-templates');
+          //window.location.href = CRM.url('civicrm/membership-card-templates', {id: result.id});
         })
         .fail(function(error) {
           CRM.alert('Error saving template: ' + error.error_message, 'Error', 'error');

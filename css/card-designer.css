@@ -11,10 +11,11 @@
   border-bottom: 1px solid #dee2e6;
   padding: 15px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  width: 15%;
 }
 
 .card-toolbar {
-  display: flex;
+  display: grid;
   gap: 10px;
   align-items: center;
   margin-bottom: 15px;
@@ -58,7 +59,7 @@
 }
 
 .card-settings {
-  display: flex;
+  display: grid;
   gap: 15px;
   align-items: center;
 }
