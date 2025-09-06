@@ -211,12 +211,10 @@ class CRM_Membershipcard_API_MembershipCard {
     $cardDataBack = json_decode($card->back_card_data, TRUE);
 
     // Generate card image using template processor
-    $imageDataFront = self::generateCardImage($cardDataFront);
-    $imageDataBack = self::generateCardImage($cardDataBack);
+    $imageData = self::generateCardImage($cardDataFront, $cardDataBack);
 
     return [
-      'front_image_data' => $imageDataFront,
-      'back_image_data' => $imageDataBack,
+      'image_data' => $imageData,
       'filename' => "membership-card-{$card->membership_id}.png",
       'mime_type' => 'image/png',
     ];
@@ -225,7 +223,7 @@ class CRM_Membershipcard_API_MembershipCard {
   /**
    * Generate card image from template data
    */
-  private static function generateCardImage($cardData) {
+  private static function generateCardImage($frontResult, $backResult) {
     // This would use a server-side image generation library
     // For now, return base64 placeholder
     return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
@@ -522,16 +520,232 @@ class CRM_Membershipcard_API_MembershipCard {
     }
   }
 
-  private static function combineCardSides($frontImageData, $backImageData) {
-    // Placeholder for image combination logic
-    // In a real implementation, you would use GD or ImageMagick
-    return $frontImageData; // Return front as placeholder
+  /**
+   * Combine front and back card sides into a single image
+   * @param string $frontImageData Base64 encoded front image data
+   * @param string $backImageData Base64 encoded back image data
+   * @param array $options Optional configuration for layout
+   * @return string Base64 encoded combined image data
+   */
+  private static function combineCardSides($frontImageData, $backImageData, $options = []) {
+    // Default options
+    $defaultOptions = [
+      'layout' => 'horizontal', // 'horizontal', 'vertical'
+      'spacing' => 20,
+      'background_color' => [255, 255, 255],
+      'card_width' => 640,
+      'card_height' => 400,
+      'quality' => 90
+    ];
+    $options = array_merge($defaultOptions, $options);
+
+    try {
+      // Remove data URL prefix if present
+      $frontImageData = preg_replace('/^data:image\/[^;]+;base64,/', '', $frontImageData);
+      $backImageData = preg_replace('/^data:image\/[^;]+;base64,/', '', $backImageData);
+
+      // Decode base64 images
+      $frontImageBinary = base64_decode($frontImageData);
+      $backImageBinary = base64_decode($backImageData);
+
+      if (!$frontImageBinary || !$backImageBinary) {
+        throw new Exception("Invalid image data provided");
+      }
+
+      // Create image resources from binary data
+      $frontImage = imagecreatefromstring($frontImageBinary);
+      $backImage = imagecreatefromstring($backImageBinary);
+
+      if (!$frontImage || !$backImage) {
+        throw new Exception("Failed to create image resources");
+      }
+
+      // Get image dimensions
+      $frontWidth = imagesx($frontImage);
+      $frontHeight = imagesy($frontImage);
+      $backWidth = imagesx($backImage);
+      $backHeight = imagesy($backImage);
+
+      // Calculate combined image dimensions
+      if ($options['layout'] === 'horizontal') {
+        $combinedWidth = $frontWidth + $backWidth + $options['spacing'];
+        $combinedHeight = max($frontHeight, $backHeight);
+      }
+      else { // vertical
+        $combinedWidth = max($frontWidth, $backWidth);
+        $combinedHeight = $frontHeight + $backHeight + $options['spacing'];
+      }
+
+      // Create combined image canvas
+      $combinedImage = imagecreatetruecolor($combinedWidth, $combinedHeight);
+
+      // Set background color
+      $bgColor = imagecolorallocate(
+        $combinedImage,
+        $options['background_color'][0],
+        $options['background_color'][1],
+        $options['background_color'][2]
+      );
+      imagefill($combinedImage, 0, 0, $bgColor);
+
+      // Calculate positions for centering
+      if ($options['layout'] === 'horizontal') {
+        $frontX = 0;
+        $frontY = ($combinedHeight - $frontHeight) / 2;
+        $backX = $frontWidth + $options['spacing'];
+        $backY = ($combinedHeight - $backHeight) / 2;
+      }
+      else { // vertical
+        $frontX = ($combinedWidth - $frontWidth) / 2;
+        $frontY = 0;
+        $backX = ($combinedWidth - $backWidth) / 2;
+        $backY = $frontHeight + $options['spacing'];
+      }
+
+      // Copy images to combined canvas
+      imagecopy($combinedImage, $frontImage, $frontX, $frontY, 0, 0, $frontWidth, $frontHeight);
+      imagecopy($combinedImage, $backImage, $backX, $backY, 0, 0, $backWidth, $backHeight);
+
+      // Generate output
+      ob_start();
+      imagepng($combinedImage, NULL, 9);
+      $combinedImageData = ob_get_contents();
+      ob_end_clean();
+
+      // Clean up memory
+      imagedestroy($frontImage);
+      imagedestroy($backImage);
+      imagedestroy($combinedImage);
+
+      return 'data:image/png;base64,' . base64_encode($combinedImageData);
+
+    }
+    catch (Exception $e) {
+      CRM_Core_Error::debug_log_message('combineCardSides error: ' . $e->getMessage());
+
+      // Return front image as fallback
+      return $frontImageData;
+    }
   }
 
-  private static function generateDualSidePDF($frontResult, $backResult) {
-    // Placeholder for PDF generation logic
-    // In a real implementation, you would use TCPDF or similar
-    return base64_encode("PDF content would go here");
+  /**
+   * Generate a dual-sided PDF from front and back card results
+   * @param array $frontResult Front card generation result
+   * @param array $backResult Back card generation result
+   * @param array $options PDF generation options
+   * @return string Base64 encoded PDF data
+   */
+  private static function generateDualSidePDF($frontResult, $backResult, $options = []) {
+    // Check if TCPDF is available
+    if (!class_exists('TCPDF')) {
+      throw new Exception("TCPDF library is required for PDF generation");
+    }
+
+    $defaultOptions = [
+      'page_format' => 'A4',
+      'orientation' => 'L', // L=Landscape, P=Portrait
+      'margins' => [10, 10, 10, 10], // top, right, bottom, left
+      'card_width' => 86, // mm (standard credit card width)
+      'card_height' => 54, // mm (standard credit card height)
+      'cards_per_row' => 2,
+      'spacing' => 10
+    ];
+    $options = array_merge($defaultOptions, $options);
+
+    try {
+      // Create new PDF document
+      $pdf = new TCPDF($options['orientation'], 'mm', $options['page_format'], TRUE, 'UTF-8', FALSE);
+
+      // Set document information
+      $pdf->SetCreator('CiviCRM Membership Card System');
+      $pdf->SetAuthor('CiviCRM');
+      $pdf->SetTitle('Membership Card - Dual Sided');
+      $pdf->SetSubject('Membership Card');
+
+      // Remove default header/footer
+      $pdf->setPrintHeader(FALSE);
+      $pdf->setPrintFooter(FALSE);
+
+      // Set margins
+      $pdf->SetMargins($options['margins'][3], $options['margins'][0], $options['margins'][1]);
+      $pdf->SetAutoPageBreak(TRUE, $options['margins'][2]);
+
+      // Add a page
+      $pdf->AddPage();
+
+      // Convert base64 images to temporary files
+      $frontImageData = preg_replace('/^data:image\/[^;]+;base64,/', '', $frontResult['image_data']);
+      $backImageData = preg_replace('/^data:image\/[^;]+;base64,/', '', $backResult['image_data']);
+
+      $frontTempFile = tempnam(sys_get_temp_dir(), 'front_card_') . '.png';
+      $backTempFile = tempnam(sys_get_temp_dir(), 'back_card_') . '.png';
+
+      file_put_contents($frontTempFile, base64_decode($frontImageData));
+      file_put_contents($backTempFile, base64_decode($backImageData));
+
+      // Calculate positions
+      $cardWidth = $options['card_width'];
+      $cardHeight = $options['card_height'];
+      $spacing = $options['spacing'];
+
+      // Position front card
+      $frontX = $options['margins'][3];
+      $frontY = $options['margins'][0];
+
+      // Position back card
+      if ($options['cards_per_row'] == 1) {
+        $backX = $frontX;
+        $backY = $frontY + $cardHeight + $spacing;
+      }
+      else {
+        $backX = $frontX + $cardWidth + $spacing;
+        $backY = $frontY;
+      }
+
+      // Add front card image
+      $pdf->Image($frontTempFile, $frontX, $frontY, $cardWidth, $cardHeight, 'PNG', '', 'T', FALSE, 300, '', FALSE, FALSE, 0, FALSE, FALSE, FALSE);
+
+      // Add back card image
+      $pdf->Image($backTempFile, $backX, $backY, $cardWidth, $cardHeight, 'PNG', '', 'T', FALSE, 300, '', FALSE, FALSE, 0, FALSE, FALSE, FALSE);
+
+      // Add labels
+      $pdf->SetFont('helvetica', 'B', 10);
+      $pdf->SetTextColor(0, 0, 0);
+
+      // Front label
+      $pdf->SetXY($frontX, $frontY + $cardHeight + 2);
+      $pdf->Cell($cardWidth, 5, 'FRONT', 0, 0, 'C');
+
+      // Back label
+      $pdf->SetXY($backX, $backY + $cardHeight + 2);
+      $pdf->Cell($cardWidth, 5, 'BACK', 0, 0, 'C');
+
+      // Add cutting guidelines if requested
+      if (!empty($options['show_cut_lines'])) {
+        $pdf->SetDrawColor(200, 200, 200);
+        $pdf->SetLineWidth(0.1);
+
+        // Front card guidelines
+        $pdf->Rect($frontX, $frontY, $cardWidth, $cardHeight);
+
+        // Back card guidelines
+        $pdf->Rect($backX, $backY, $cardWidth, $cardHeight);
+      }
+
+      // Clean up temporary files
+      unlink($frontTempFile);
+      unlink($backTempFile);
+
+      // Output PDF as string
+      $pdfContent = $pdf->Output('', 'S');
+
+      return base64_encode($pdfContent);
+
+    }
+    catch (Exception $e) {
+      CRM_Core_Error::debug_log_message('generateDualSidePDF error: ' . $e->getMessage());
+      throw new Exception("Failed to generate PDF: " . $e->getMessage());
+    }
   }
 
   /**
