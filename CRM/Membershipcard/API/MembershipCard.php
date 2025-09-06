@@ -207,11 +207,14 @@ class CRM_Membershipcard_API_MembershipCard {
       throw new API_Exception("Card not found");
     }
 
-    $cardDataFront = json_decode($card->front_card_data, TRUE);
-    $cardDataBack = json_decode($card->back_card_data, TRUE);
-
+    if ($params['side'] === 'front') {
+      $cardData = json_decode($card->front_card_data, TRUE);
+    }
+    else {
+      $cardData = json_decode($card->back_card_data, TRUE);
+    }
     // Generate card image using template processor
-    $imageData = self::generateCardImage($cardDataFront, $cardDataBack);
+    $imageData = self::generateCardImage($cardData, $params['side']);
 
     return [
       'image_data' => $imageData,
@@ -219,7 +222,7 @@ class CRM_Membershipcard_API_MembershipCard {
       'mime_type' => 'image/png',
     ];
   }
-  
+
   /**
    * Verify membership card
    */
@@ -476,7 +479,7 @@ class CRM_Membershipcard_API_MembershipCard {
     return $card;
   }
 
-  private static function downloadBothSides($params) {
+  public static function downloadBothSides($params) {
     $frontResult = self::download(['card_id' => $params['card_id'], 'side' => 'front']);
     $backResult = self::download(['card_id' => $params['card_id'], 'side' => 'back']);
 
@@ -823,7 +826,7 @@ class CRM_Membershipcard_API_MembershipCard {
    * @param array $options Generation options
    * @return string Base64 encoded image data
    */
-  private static function generateCardImage($cardData, $options = []) {
+  private static function generateCardImage($cardData, $side = 'front', $options = []) {
     $defaultOptions = [
       'width' => 640,
       'height' => 400,
@@ -832,6 +835,18 @@ class CRM_Membershipcard_API_MembershipCard {
       'background_color' => '#ffffff',
       'dpi' => 300
     ];
+    if ($side == 'front') {
+      $cardData['background_color'] = $cardData['template']['front_background_color'] ?? '#ffffff';
+      $cardData['background_image'] = $cardData['template']['front_background_image'] ?? '';
+      $options['width'] = $cardData['template']['card_width'] ?? $defaultOptions['width'];
+      $options['height'] = $cardData['template']['card_height'] ?? $defaultOptions['height'];
+    }
+    else {
+      $cardData['background_color'] = $cardData['template']['back_background_color'] ?? '#ffffff';
+      $cardData['background_image'] = $cardData['template']['back_background_image'] ?? '';
+      $options['width'] = $cardData['template']['card_width'] ?? $defaultOptions['width'];
+      $options['height'] = $cardData['template']['card_height'] ?? $defaultOptions['height'];
+    }
     $options = array_merge($defaultOptions, $options);
 
     try {
@@ -962,14 +977,212 @@ class CRM_Membershipcard_API_MembershipCard {
       case 'circle':
         self::renderCircleElement($image, $element, $options);
         break;
+      case 'group':
+        if ($element['elementType'] === 'qrcode') {
+          self::renderQRCodeElement($image, $element, $tokenData);
+        }
+        break;
     }
   }
 
   /**
-   * Render text element
+   * Render text element with proper multi-line and dimension handling
    */
   private static function renderTextElement($image, $element, $options) {
+    // Extract text properties
     $text = $element['text'] ?? '';
+    $left = (int)($element['left'] ?? 0);
+    $top = (int)($element['top'] ?? 0);
+    $maxWidth = (int)($element['width'] ?? 200);
+    $maxHeight = (int)($element['height'] ?? 50);
+    $fontSize = (int)($element['fontSize'] ?? 12);
+    $fontColor = $element['fill'] ?? '#000000';
+    $fontFamily = $element['fontFamily'] ?? 'Arial';
+    $textAlign = $element['textAlign'] ?? 'left';
+    $lineHeight = (float)($element['lineHeight'] ?? 1.16);
+
+    // Convert color
+    $color = self::hexToRgb($fontColor);
+    $textColor = imagecolorallocate($image, $color['r'], $color['g'], $color['b']);
+
+    // Calculate actual line height in pixels
+    $pixelLineHeight = (int)($fontSize * $lineHeight);
+
+    // Use built-in font (scale based on fontSize)
+    $font = self::getFontSize($fontSize);
+
+    // Split text by explicit line breaks first
+    $explicitLines = explode("\n", $text);
+    $allLines = [];
+
+    // Process each explicit line - only wrap if it exceeds maxWidth
+    foreach ($explicitLines as $line) {
+      $lineWidth = self::getTextWidth($line, $font);
+
+      if ($lineWidth > $maxWidth && $maxWidth > 0) {
+        // Line is too wide, wrap it
+        $wrappedLines[] = $line;//self::wrapText($line, $maxWidth, $font);
+        $allLines = array_merge($allLines, $wrappedLines);
+      } else {
+        // Line fits, keep it as is
+        $allLines[] = $line;
+      }
+    }
+    // Calculate total text height
+    $totalTextHeight = count($allLines) * $pixelLineHeight;
+
+    // Only truncate if text actually exceeds maxHeight AND maxHeight is reasonable
+    if ($maxHeight > 0 && $totalTextHeight > $maxHeight) {
+      $maxLines = max(1, (int)($maxHeight / $pixelLineHeight));
+      if (count($allLines) > $maxLines) {
+        $allLines = array_slice($allLines, 0, $maxLines);
+        // Add ellipsis to last line if truncated and there's enough space
+        if ($maxLines > 0 && $maxWidth > 30) {
+          $lastLine = $allLines[$maxLines - 1];
+          $allLines[$maxLines - 1] = self::truncateLineWithEllipsis($lastLine, $maxWidth, $font);
+        }
+      }
+    }
+    // echo '<pre>$allLines-'; print_r($allLines); echo '</pre>';
+
+    // Calculate starting Y position
+    $startY = $top;
+
+    // Render each line
+    foreach ($allLines as $index => $line) {
+      $y = $startY + ($index * $pixelLineHeight);
+
+      // Calculate X position based on text alignment
+      $x = self::calculateTextX($left, $maxWidth, $line, $textAlign, $font);
+
+      // Render the line
+      imagestring($image, $font, $x, $y, $line, $textColor);
+    }
+  }
+  /**
+   * Wrap text to fit within specified width (only called when needed)
+   */
+  private static function wrapText($text, $maxWidth, $font) {
+    if (empty($text) || $maxWidth <= 0) {
+      return [$text];
+    }
+
+    $words = explode(' ', $text);
+    $lines = [];
+    $currentLine = '';
+
+    foreach ($words as $word) {
+      $testLine = empty($currentLine) ? $word : $currentLine . ' ' . $word;
+      $testWidth = self::getTextWidth($testLine, $font);
+
+      if ($testWidth <= $maxWidth) {
+        $currentLine = $testLine;
+      } else {
+        // If current line is not empty, save it and start new line
+        if (!empty($currentLine)) {
+          $lines[] = $currentLine;
+          $currentLine = $word;
+
+          // Check if single word is still too long
+          if (self::getTextWidth($word, $font) > $maxWidth) {
+            $currentLine = self::truncateLineWithEllipsis($word, $maxWidth, $font);
+            $lines[] = $currentLine;
+            $currentLine = '';
+          }
+        } else {
+          // Single word is too long, truncate it
+          $currentLine = self::truncateLineWithEllipsis($word, $maxWidth, $font);
+          $lines[] = $currentLine;
+          $currentLine = '';
+        }
+      }
+    }
+
+    // Add the last line if not empty
+    if (!empty($currentLine)) {
+      $lines[] = $currentLine;
+    }
+
+    return empty($lines) ? [''] : $lines;
+  }
+
+
+  /**
+   * Get appropriate built-in font size based on fontSize
+   */
+  private static function getFontSize($fontSize) {
+    if ($fontSize <= 8) return 1;
+    if ($fontSize <= 10) return 2;
+    if ($fontSize <= 12) return 3;
+    if ($fontSize <= 14) return 4;
+    return 5; // Maximum built-in font size
+  }
+
+  /**
+   * Calculate text width for built-in fonts
+   */
+  private static function getTextWidth($text, $font) {
+    // Approximate character widths for built-in fonts
+    $charWidths = [
+      1 => 5,   // Very small
+      2 => 6,   // Small
+      3 => 7,   // Medium
+      4 => 8,   // Large
+      5 => 10   // Very large
+    ];
+
+    $charWidth = $charWidths[$font] ?? 7;
+    return strlen($text) * $charWidth;
+  }
+
+  /**
+   * Calculate X position based on text alignment
+   */
+  private static function calculateTextX($left, $maxWidth, $text, $textAlign, $font) {
+    switch ($textAlign) {
+      case 'center':
+        $textWidth = self::getTextWidth($text, $font);
+        return $left + (($maxWidth - $textWidth) / 2);
+
+      case 'right':
+        $textWidth = self::getTextWidth($text, $font);
+        return $left + $maxWidth - $textWidth;
+
+      case 'left':
+      default:
+        return $left;
+    }
+  }
+
+  /**
+   * Truncate line and add ellipsis if it's too long
+   */
+  private static function truncateLineWithEllipsis($text, $maxWidth, $font) {
+    $ellipsis = '...';
+    $ellipsisWidth = self::getTextWidth($ellipsis, $font);
+
+    if (self::getTextWidth($text, $font) <= $maxWidth) {
+      return $text;
+    }
+
+    // Find the maximum length that fits with ellipsis
+    $maxLengthWithEllipsis = $maxWidth - $ellipsisWidth;
+
+    for ($i = strlen($text) - 1; $i > 0; $i--) {
+      $truncated = substr($text, 0, $i);
+      if (self::getTextWidth($truncated, $font) <= $maxLengthWithEllipsis) {
+        return $truncated . $ellipsis;
+      }
+    }
+
+    return $ellipsis; // If even one character is too wide
+  }
+  /**
+   * Render text element
+   */
+  private static function renderTextElement2($image, $element, $options) {
+    $text = $element['text'] ?? '';
+    $text = nl2br($text);
     $x = ($element['left'] ?? 0) * ($options['width'] / 640); // Scale to image size
     $y = ($element['top'] ?? 0) * ($options['height'] / 400);
     $fontSize = ($element['fontSize'] ?? 16) * ($options['width'] / 640);
@@ -1010,6 +1223,40 @@ class CRM_Membershipcard_API_MembershipCard {
     catch (Exception $e) {
       // Silently fail for images
     }
+  }
+
+  /**
+   * Render QR code element
+   */
+  private static function renderQRCodeElement($image, $element, $tokenData) {
+    // For QR code, we'll render a placeholder rectangle
+    // In production, you'd integrate with a QR code library
+    $left = (int)($element['left'] ?? 0);
+    $top = (int)($element['top'] ?? 0);
+    $width = (int)($element['width'] ?? 80);
+    $height = (int)($element['height'] ?? 80);
+
+    // Create QR code placeholder
+    $qrColor = imagecolorallocate($image, 0, 0, 0); // Black
+    $qrBorder = imagecolorallocate($image, 204, 204, 204); // Gray border
+
+    // Draw border
+    imagerectangle($image, $left, $top, $left + $width, $top + $height, $qrBorder);
+
+    // Fill with pattern (simplified QR representation)
+    for ($x = $left + 2; $x < $left + $width - 2; $x += 4) {
+      for ($y = $top + 2; $y < $top + $height - 2; $y += 4) {
+        if (($x + $y) % 8 === 0) {
+          imagerectangle($image, $x, $y, $x + 2, $y + 2, $qrColor);
+        }
+      }
+    }
+
+    // Add "QR" text in center
+    $centerX = $left + ($width / 2) - 10;
+    $centerY = $top + ($height / 2) - 5;
+    $textColor = imagecolorallocate($image, 255, 255, 255); // White
+    imagestring($image, 2, $centerX, $centerY, 'QR', $textColor);
   }
 
   /**
