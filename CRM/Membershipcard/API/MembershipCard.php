@@ -291,7 +291,7 @@ class CRM_Membershipcard_API_MembershipCard {
       return (array)$dao;
     }
 
-    return null;
+    return NULL;
   }
 
   private static function determineSidesToGenerate($template, $params) {
@@ -306,7 +306,8 @@ class CRM_Membershipcard_API_MembershipCard {
           $sides[] = $side;
         }
       }
-    } else {
+    }
+    else {
       // Default behavior
       $sides[] = 'front'; // Always generate front
 
@@ -776,7 +777,8 @@ class CRM_Membershipcard_API_MembershipCard {
       $sidesGenerated = [];
       if (property_exists($dao, 'sides_generated') && !empty($dao->sides_generated)) {
         $sidesGenerated = explode(',', $dao->sides_generated);
-      } else {
+      }
+      else {
         // Fallback logic
         $sidesGenerated = ['front'];
         if (!empty($dao->is_dual_sided)) {
@@ -822,5 +824,311 @@ class CRM_Membershipcard_API_MembershipCard {
     }
 
     return ['values' => $results];
+  }
+
+  /**
+   * Generate card image from template data using server-side rendering
+   * @param array $cardData Card data including template and elements
+   * @param array $options Generation options
+   * @return string Base64 encoded image data
+   */
+  private static function generateCardImage($cardData, $options = []) {
+    $defaultOptions = [
+      'width' => 640,
+      'height' => 400,
+      'format' => 'png',
+      'quality' => 90,
+      'background_color' => '#ffffff',
+      'dpi' => 300
+    ];
+    $options = array_merge($defaultOptions, $options);
+
+    try {
+      // Create image canvas
+      $image = imagecreatetruecolor($options['width'], $options['height']);
+
+      // Enable alpha blending
+      imagealphablending($image, TRUE);
+      imagesavealpha($image, TRUE);
+
+      // Set background color
+      $bgColor = self::hexToRgb($cardData['background_color'] ?? $options['background_color']);
+      $backgroundColor = imagecolorallocate($image, $bgColor['r'], $bgColor['g'], $bgColor['b']);
+      imagefill($image, 0, 0, $backgroundColor);
+
+      // Process background image if exists
+      if (!empty($cardData['background_image'])) {
+        self::addBackgroundImage($image, $cardData['background_image'], $options);
+      }
+
+      // Process elements
+      if (!empty($cardData['elements']['objects'])) {
+        foreach ($cardData['elements']['objects'] as $element) {
+          self::renderElement($image, $element, $options);
+        }
+      }
+
+      // Generate QR code if needed
+      if (!empty($cardData['qr_code'])) {
+        self::addQRCode($image, $cardData['qr_code'], $options);
+      }
+
+      // Generate barcode if needed
+      if (!empty($cardData['barcode'])) {
+        self::addBarcode($image, $cardData['barcode'], $options);
+      }
+
+      // Output image
+      ob_start();
+      switch (strtolower($options['format'])) {
+        case 'jpg':
+        case 'jpeg':
+          imagejpeg($image, NULL, $options['quality']);
+          $format = 'jpeg';
+          break;
+        case 'png':
+        default:
+          imagepng($image, NULL, 9);
+          $format = 'png';
+          break;
+      }
+      $imageData = ob_get_contents();
+      ob_end_clean();
+
+      // Clean up
+      imagedestroy($image);
+
+      return 'data:image/' . $format . ';base64,' . base64_encode($imageData);
+
+    }
+    catch (Exception $e) {
+      CRM_Core_Error::debug_log_message('generateCardImage error: ' . $e->getMessage());
+
+      // Return placeholder image
+      return self::generatePlaceholderImage($options);
+    }
+  }
+
+  /**
+   * Helper function to convert hex color to RGB array
+   */
+  private static function hexToRgb($hex) {
+    $hex = ltrim($hex, '#');
+    if (strlen($hex) == 3) {
+      $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+    }
+    return [
+      'r' => hexdec(substr($hex, 0, 2)),
+      'g' => hexdec(substr($hex, 2, 2)),
+      'b' => hexdec(substr($hex, 4, 2))
+    ];
+  }
+
+  /**
+   * Add background image to card
+   */
+  private static function addBackgroundImage($image, $backgroundImageUrl, $options) {
+    try {
+      // Download or load background image
+      $bgImageData = file_get_contents($backgroundImageUrl);
+      if ($bgImageData === FALSE) {
+        return;
+      }
+
+      $bgImage = imagecreatefromstring($bgImageData);
+      if (!$bgImage) {
+        return;
+      }
+
+      // Resize background to fit card
+      $bgResized = imagescale($bgImage, $options['width'], $options['height']);
+      imagecopy($image, $bgResized, 0, 0, 0, 0, $options['width'], $options['height']);
+
+      imagedestroy($bgImage);
+      imagedestroy($bgResized);
+    }
+    catch (Exception $e) {
+      // Silently fail for background images
+    }
+  }
+
+  /**
+   * Render individual element on card
+   */
+  private static function renderElement($image, $element, $options) {
+    switch ($element['type']) {
+      case 'text':
+      case 'textbox':
+        self::renderTextElement($image, $element, $options);
+        break;
+      case 'image':
+        self::renderImageElement($image, $element, $options);
+        break;
+      case 'rect':
+      case 'rectangle':
+        self::renderRectElement($image, $element, $options);
+        break;
+      case 'circle':
+        self::renderCircleElement($image, $element, $options);
+        break;
+    }
+  }
+
+  /**
+   * Render text element
+   */
+  private static function renderTextElement($image, $element, $options) {
+    $text = $element['text'] ?? '';
+    $x = ($element['left'] ?? 0) * ($options['width'] / 640); // Scale to image size
+    $y = ($element['top'] ?? 0) * ($options['height'] / 400);
+    $fontSize = ($element['fontSize'] ?? 16) * ($options['width'] / 640);
+
+    $color = self::hexToRgb($element['fill'] ?? '#000000');
+    $textColor = imagecolorallocate($image, $color['r'], $color['g'], $color['b']);
+
+    // Use built-in font (simple implementation)
+    imagestring($image, 5, $x, $y, $text, $textColor);
+  }
+
+  /**
+   * Render image element
+   */
+  private static function renderImageElement($image, $element, $options) {
+    try {
+      $src = $element['src'] ?? '';
+      if (empty($src)) {
+        return;
+      }
+
+      $imageData = file_get_contents($src);
+      $elementImage = imagecreatefromstring($imageData);
+
+      if ($elementImage) {
+        $x = ($element['left'] ?? 0) * ($options['width'] / 640);
+        $y = ($element['top'] ?? 0) * ($options['height'] / 400);
+        $width = ($element['width'] ?? 100) * ($options['width'] / 640);
+        $height = ($element['height'] ?? 100) * ($options['height'] / 400);
+
+        $resized = imagescale($elementImage, $width, $height);
+        imagecopy($image, $resized, $x, $y, 0, 0, $width, $height);
+
+        imagedestroy($elementImage);
+        imagedestroy($resized);
+      }
+    }
+    catch (Exception $e) {
+      // Silently fail for images
+    }
+  }
+
+  /**
+   * Render rectangle element
+   */
+  private static function renderRectElement($image, $element, $options) {
+    $x1 = ($element['left'] ?? 0) * ($options['width'] / 640);
+    $y1 = ($element['top'] ?? 0) * ($options['height'] / 400);
+    $width = ($element['width'] ?? 100) * ($options['width'] / 640);
+    $height = ($element['height'] ?? 100) * ($options['height'] / 400);
+
+    $color = self::hexToRgb($element['fill'] ?? '#000000');
+    $rectColor = imagecolorallocate($image, $color['r'], $color['g'], $color['b']);
+
+    imagefilledrectangle($image, $x1, $y1, $x1 + $width, $y1 + $height, $rectColor);
+  }
+
+  /**
+   * Render circle element
+   */
+  private static function renderCircleElement($image, $element, $options) {
+    $x = ($element['left'] ?? 0) * ($options['width'] / 640);
+    $y = ($element['top'] ?? 0) * ($options['height'] / 400);
+    $radius = ($element['radius'] ?? 50) * ($options['width'] / 640);
+
+    $color = self::hexToRgb($element['fill'] ?? '#000000');
+    $circleColor = imagecolorallocate($image, $color['r'], $color['g'], $color['b']);
+
+    imagefilledellipse($image, $x + $radius, $y + $radius, $radius * 2, $radius * 2, $circleColor);
+  }
+
+  /**
+   * Add QR code to image
+   */
+  private static function addQRCode($image, $qrData, $options) {
+    // This would require a QR code library like phpqrcode
+    // For now, we'll add a placeholder rectangle
+    $x = $options['width'] - 100;
+    $y = $options['height'] - 100;
+    $size = 80;
+
+    $qrColor = imagecolorallocate($image, 0, 0, 0);
+    imagefilledrectangle($image, $x, $y, $x + $size, $y + $size, $qrColor);
+
+    // Add QR label
+    $white = imagecolorallocate($image, 255, 255, 255);
+    imagestring($image, 2, $x + 25, $y + 35, 'QR', $white);
+  }
+
+  /**
+   * Add barcode to image
+   */
+  private static function addBarcode($image, $barcodeData, $options) {
+    // Simple barcode representation with vertical lines
+    $x = 50;
+    $y = $options['height'] - 50;
+    $width = 200;
+    $height = 30;
+
+    $barcodeColor = imagecolorallocate($image, 0, 0, 0);
+
+    // Create simple barcode pattern
+    for ($i = 0; $i < $width; $i += 3) {
+      imageline($image, $x + $i, $y, $x + $i, $y + $height, $barcodeColor);
+    }
+
+    // Add barcode number
+    $barcodeText = $barcodeData['data'] ?? '';
+    imagestring($image, 2, $x, $y + $height + 5, $barcodeText, $barcodeColor);
+  }
+
+  /**
+   * Generate a placeholder image when rendering fails
+   */
+  private static function generatePlaceholderImage($options) {
+    $image = imagecreatetruecolor($options['width'], $options['height']);
+    $white = imagecolorallocate($image, 255, 255, 255);
+    $gray = imagecolorallocate($image, 128, 128, 128);
+    $lightGray = imagecolorallocate($image, 200, 200, 200);
+
+    imagefill($image, 0, 0, $white);
+
+    // Add border
+    imagerectangle($image, 5, 5, $options['width'] - 6, $options['height'] - 6, $lightGray);
+
+    // Add side-specific text
+    $side = $options['side'] ?? 'card';
+    $sideText = strtoupper($side) . ' SIDE';
+
+    imagestring($image, 5, 50, 50, 'Membership Card', $gray);
+    imagestring($image, 4, 50, 80, $sideText, $gray);
+    imagestring($image, 3, 50, 110, 'Error generating image', $gray);
+
+    // Add placeholder elements
+    imagestring($image, 2, 50, 150, 'Name: [Member Name]', $lightGray);
+    imagestring($image, 2, 50, 170, 'ID: [Member ID]', $lightGray);
+    imagestring($image, 2, 50, 190, 'Expires: [Date]', $lightGray);
+
+    // Add placeholder QR code area
+    imagerectangle($image, $options['width'] - 120, $options['height'] - 120,
+      $options['width'] - 20, $options['height'] - 20, $lightGray);
+    imagestring($image, 2, $options['width'] - 110, $options['height'] - 80, 'QR CODE', $lightGray);
+
+    ob_start();
+    imagepng($image);
+    $imageData = ob_get_contents();
+    ob_end_clean();
+
+    imagedestroy($image);
+
+    return 'data:image/png;base64,' . base64_encode($imageData);
   }
 }
