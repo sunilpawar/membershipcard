@@ -200,20 +200,23 @@ class CRM_Membershipcard_API_MembershipCard {
       throw new API_Exception("Missing required field: card_id");
     }
 
-    $card = new CRM_Membershipcard_DAO_Card();
+    $card = new CRM_Membershipcard_DAO_MembershipCard();
     $card->id = $params['card_id'];
 
     if (!$card->find(TRUE)) {
       throw new API_Exception("Card not found");
     }
 
-    $cardData = json_decode($card->card_data, TRUE);
+    $cardDataFront = json_decode($card->front_card_data, TRUE);
+    $cardDataBack = json_decode($card->back_card_data, TRUE);
 
     // Generate card image using template processor
-    $imageData = self::generateCardImage($cardData);
+    $imageDataFront = self::generateCardImage($cardDataFront);
+    $imageDataBack = self::generateCardImage($cardDataBack);
 
     return [
-      'image_data' => $imageData,
+      'front_image_data' => $imageDataFront,
+      'back_image_data' => $imageDataBack,
       'filename' => "membership-card-{$card->membership_id}.png",
       'mime_type' => 'image/png',
     ];
