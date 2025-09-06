@@ -219,16 +219,7 @@ class CRM_Membershipcard_API_MembershipCard {
       'mime_type' => 'image/png',
     ];
   }
-
-  /**
-   * Generate card image from template data
-   */
-  private static function generateCardImage($frontResult, $backResult) {
-    // This would use a server-side image generation library
-    // For now, return base64 placeholder
-    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
-  }
-
+  
   /**
    * Verify membership card
    */
