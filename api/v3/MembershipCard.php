@@ -41,17 +41,20 @@ function civicrm_api3_membership_card_generate($params) {
     ]);
 
     // Generate card data
-    $cardData = _membership_card_process_template($template, $contact, $membership, $membershipType);
+    // $cardData = _membership_card_process_template($template, $contact,$membership, $membershipType);
+    $cardDataFront = CRM_Membershipcard_API_MembershipCard::processTemplate($template, $contact, $membership, $membershipType, TRUE);
+    $cardDataBack = CRM_Membershipcard_API_MembershipCard::processTemplate($template, $contact, $membership, $membershipType, FALSE);
+
 
     // Generate QR code and barcode data
-    $qrData = _membership_card_generate_qr_code($membership);
-    $barcodeData = _membership_card_generate_barcode($membership);
-
+    $qrData = CRM_Membershipcard_API_MembershipCard::generateQRCode($membership);
+    $barcodeData = CRM_Membershipcard_API_MembershipCard::generateBarcode($membership);
     // Save card record
     $cardParams = [
       'membership_id' => $params['membership_id'],
       'template_id' => $params['template_id'],
-      'card_data' => json_encode($cardData),
+      'front_card_data' => json_encode($cardDataFront),
+      'back_card_data' => json_encode($cardDataBack),
       'qr_code' => json_encode($qrData),
       'barcode' => json_encode($barcodeData),
       'created_date' => date('Y-m-d H:i:s'),
@@ -76,13 +79,13 @@ function civicrm_api3_membership_card_generate($params) {
 
     return civicrm_api3_create_success([
       'card_id' => $cardId,
-      'card_data' => $cardData,
+      'front_card_data' => $cardDataFront,
+      'back_card_data' => $cardDataBack,
       'qr_code' => $qrData,
       'barcode' => $barcodeData,
       'download_url' => CRM_Utils_System::url('civicrm/membership-card/download', "card_id={$cardId}", TRUE),
       'verification_url' => $qrData['verification_url'],
     ]);
-
   }
   catch (Exception $e) {
     throw new API_Exception('Error generating membership card: ' . $e->getMessage());
@@ -416,34 +419,6 @@ function _membership_card_process_template($template, $contact, $membership, $me
     'tokenData' => $tokenData,
     'membership' => $membership,
     'contact' => $contact,
-  ];
-}
-
-/**
- * Generate QR code data
- */
-function _membership_card_generate_qr_code($membership) {
-  $verifyUrl = CRM_Utils_System::url('civicrm/membership-card/verify',
-    "id={$membership['id']}", TRUE, NULL, TRUE, TRUE);
-
-  return [
-    'data' => $verifyUrl,
-    'verification_url' => $verifyUrl,
-    'membership_id' => $membership['id'],
-    'contact_id' => $membership['contact_id'],
-    'generated_date' => date('Y-m-d H:i:s'),
-  ];
-}
-
-/**
- * Generate barcode data
- */
-function _membership_card_generate_barcode($membership) {
-  return [
-    'data' => str_pad($membership['id'], 12, '0', STR_PAD_LEFT),
-    'type' => 'CODE128',
-    'membership_id' => $membership['id'],
-    'generated_date' => date('Y-m-d H:i:s'),
   ];
 }
 

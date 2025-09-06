@@ -191,6 +191,7 @@ class MembershipCardDesigner {
     const sideText = this.currentSide === 'front' ? 'Front Side' : 'Back Side';
     document.querySelector('.current-side-text').innerHTML = `Currently editing: <strong>${sideText}</strong>`;
     document.querySelector('#canvas-side-text').innerHTML = sideText;
+    document.querySelector('#side-name').innerHTML = sideText;
 
     // Update canvas background for current side
     const bgColor = this.cardData[this.currentSide].background_color || '#ffffff';
@@ -1320,7 +1321,7 @@ class MembershipCardDesigner {
     `;
 
     toolbar.insertBefore(sideToggleDiv, toolbar.firstChild);
-
+    document.getElementById('back-side-btn').style.display = 'block';
     // Bind events
     sideToggleDiv.querySelectorAll('.side-toggle-btn').forEach(btn => {
       btn.addEventListener('click', () => this.switchSide(btn.dataset.side));
@@ -1329,6 +1330,7 @@ class MembershipCardDesigner {
 
   removeSideToggleToolbar() {
     const existing = document.querySelector('.side-toggle-toolbar');
+    document.getElementById('back-side-btn').style.display = 'none';
     if (existing) {
       existing.remove();
     }
