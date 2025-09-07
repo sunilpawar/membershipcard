@@ -534,6 +534,7 @@ class MembershipCardDesigner {
   getRecommendedTokensHTML() {
     const frontTokens = [
       '{contact.display_name}',
+      '{contact.external_identifier}',
       '{contact.image_URL}',
       '{membership.membership_type}',
       '{organization.organization_name}'
@@ -760,7 +761,8 @@ class MembershipCardDesigner {
         first_name: 'First Name',
         last_name: 'Last Name',
         email: 'Email Address',
-        phone: 'Phone Number'
+        phone: 'Phone Number',
+        external_identifier: 'Member ID',
       },
       membership: {
         membership_type: 'Membership Type',
@@ -1117,6 +1119,7 @@ class MembershipCardDesigner {
   previewCard() {
     // Generate preview with sample data
     const sampleData = {
+      'contact.external_identifier': '123456',
       'contact.display_name': 'John Doe',
       'contact.first_name': 'John',
       'contact.last_name': 'Doe',
@@ -1165,6 +1168,7 @@ class MembershipCardDesigner {
 
   replaceTokensInText(textObj, data = null) {
     const sampleData = data || {
+      'contact.external_identifier': '123456',
       'contact.display_name': 'John Doe',
       'contact.first_name': 'John',
       'contact.last_name': 'Doe',

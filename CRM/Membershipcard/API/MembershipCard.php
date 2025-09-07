@@ -77,6 +77,7 @@ class CRM_Membershipcard_API_MembershipCard {
   public static function processTemplate($template, $contact, $membership, $membershipType, $isFront = TRUE) {
     // Prepare token data
     $tokenData = [
+      '{contact.external_identifier}' => $contact['external_identifier'],
       '{contact.display_name}' => $contact['display_name'],
       '{contact.first_name}' => $contact['first_name'],
       '{contact.last_name}' => $contact['last_name'],
@@ -353,6 +354,7 @@ class CRM_Membershipcard_API_MembershipCard {
 
   private static function getTokenData($contact, $membership, $membershipType) {
     return [
+      '{contact.external_identifier}' => $contact['external_identifier'],
       '{contact.display_name}' => $contact['display_name'],
       '{contact.first_name}' => CRM_Utils_Array::value('first_name', $contact),
       '{contact.last_name}' => CRM_Utils_Array::value('last_name', $contact),
