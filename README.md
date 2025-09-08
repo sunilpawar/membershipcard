@@ -29,7 +29,7 @@ A comprehensive membership card designer extension for CiviCRM with drag-and-dro
 
 ```bash
 cd /path/to/civicrm/extensions
-git clone https://github.com/skvare/civicrm-membershipcard.git com.skvare.membershipcard
+git clone https://github.com/sunilpawar/membershipcard.git com.skvare.membershipcard
 ```
 
 Or download the zip file and extract to your extensions directory.
@@ -150,56 +150,6 @@ Each template can be configured with:
 - **Resolution**: Match your card dimensions for best quality
 - **Transparency**: PNG format supports transparent backgrounds
 
-## Customization
-
-### Adding Custom Tokens
-
-You can add custom tokens by modifying the `membershipcard_get_tokens()` function:
-
-```php
-function membershipcard_get_tokens() {
-  $tokens = [
-    // ... existing tokens
-    'custom' => [
-      'custom_field_1' => 'Custom Field 1',
-      'custom_field_2' => 'Custom Field 2',
-    ],
-  ];
-  return $tokens;
-}
-```
-
-### Custom CSS Styling
-
-Add custom CSS to modify the designer interface:
-
-```css
-/* Custom card designer styles */
-.card-designer-container {
-  /* Your custom styles */
-}
-
-.token-item {
-  /* Custom token styling */
-}
-```
-
-### Template Hooks
-
-The extension provides hooks for customization:
-
-```php
-// Hook to modify card data before generation
-function hook_civicrm_membershipcard_preGenerate(&$cardData, $membership, $contact) {
-  // Modify card data
-}
-
-// Hook to process generated card
-function hook_civicrm_membershipcard_postGenerate($cardId, $cardData) {
-  // Post-processing
-}
-```
-
 ## API Usage
 
 ### Generate Card via API
@@ -216,18 +166,6 @@ $result = civicrm_api3('MembershipCard', 'generate', [
 ```php
 $cards = civicrm_api3('MembershipCard', 'getbycontact', [
   'contact_id' => 456,
-]);
-```
-
-### Create Template via API
-
-```php
-$template = civicrm_api3('MembershipCardTemplate', 'create', [
-  'name' => 'My Template',
-  'description' => 'Custom template',
-  'card_width' => 350,
-  'card_height' => 220,
-  'elements' => json_encode($elementData),
 ]);
 ```
 
@@ -255,18 +193,6 @@ $template = civicrm_api3('MembershipCardTemplate', 'create', [
 - Check URL accessibility for verification links
 - Test QR codes with multiple readers
 
-### Debug Mode
-
-Enable debug mode by adding to your wp-config.php or civicrm.settings.php:
-
-```php
-define('MEMBERSHIPCARD_DEBUG', TRUE);
-```
-
-This will:
-- Show detailed error messages
-- Log template processing steps
-- Enable verbose API responses
 
 ### Performance Optimization
 
@@ -275,18 +201,6 @@ This will:
 - Optimize image sizes
 - Use CDN for static assets
 - Consider batch processing for bulk generation
-
-#### Server Configuration
-```apache
-# Apache .htaccess for better performance
-<IfModule mod_expires.c>
-  ExpiresActive On
-  ExpiresByType image/png "access plus 1 month"
-  ExpiresByType image/jpg "access plus 1 month"
-  ExpiresByType application/javascript "access plus 1 month"
-  ExpiresByType text/css "access plus 1 month"
-</IfModule>
-```
 
 ## Integration Examples
 
@@ -332,71 +246,8 @@ function emailMembershipCard($contactId, $templateId) {
 }
 ```
 
-### Mobile App Integration
-
-```javascript
-// React Native QR scanner integration
-import QRCodeScanner from 'react-native-qrcode-scanner';
-
-function MembershipScanner() {
-  const onSuccess = (e) => {
-    fetch('https://yoursite.com/civicrm/membership-card/verify', {
-      method: 'POST',
-      body: JSON.stringify({ qr_data: e.data }),
-      headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.is_valid) {
-        showSuccess(data);
-      } else {
-        showError('Invalid membership card');
-      }
-    });
-  };
-
-  return (
-    <QRCodeScanner
-      onRead={onSuccess}
-      flashMode={RNCamera.Constants.FlashMode.torch}
-    />
-  );
-}
-```
-
-## Security Considerations
-
-### QR Code Security
-- Use HTTPS for verification URLs
-- Implement rate limiting on verification endpoints
-- Consider time-based expiration for cards
-- Log verification attempts for audit trail
-
-### Template Security
-- Sanitize user input in templates
-- Restrict file upload types and sizes
-- Validate template data before processing
-- Implement access controls for template management
-
-### Data Privacy
-- Consider privacy implications of photos on cards
-- Implement data retention policies
-- Ensure GDPR compliance for contact data
-- Provide opt-out mechanisms
 
 ## Advanced Features
-
-### Multi-language Support
-
-Add language tokens for international organizations:
-
-```php
-$tokens['multilingual'] = [
-  'member_label' => ts('Member'),
-  'expires_label' => ts('Expires'),
-  'valid_thru_label' => ts('Valid Through'),
-];
-```
 
 ### Custom Verification Logic
 
@@ -445,11 +296,6 @@ function batchGenerateCards($membershipIds, $templateId) {
 
 ## Support and Contributing
 
-### Getting Help
-- Check the [documentation](https://docs.yourorg.com/membershipcard)
-- Search [existing issues](https://github.com/yourorg/civicrm-membershipcard/issues)
-- Join the [CiviCRM community](https://civicrm.org/community)
-
 ### Reporting Issues
 When reporting issues, include:
 - CiviCRM version
@@ -466,21 +312,6 @@ When reporting issues, include:
 4. Add tests if applicable
 5. Submit a pull request
 
-### Development Setup
-
-```bash
-# Clone repository
-git clone https://github.com/yourorg/civicrm-membershipcard.git
-
-# Install dependencies
-npm install
-
-# Build assets
-npm run build
-
-# Run tests
-phpunit tests/
-```
 
 ## Changelog
 
@@ -505,7 +336,6 @@ phpunit tests/
 #### Version 1.2.0 (Planned)
 - Advanced QR code features
 - Custom verification workflows
-- Integration with payment processors
 - Multi-organization support
 
 ## License
