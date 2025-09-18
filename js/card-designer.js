@@ -77,8 +77,15 @@ class MembershipCardDesigner {
       backgroundColor: '#ffffff',
       preserveObjectStacking: true
     });
-
+    // Create a new line object
+    var dottedLine = new fabric.Line([50, 50, 200, 50], { // [x1, y1, x2, y2] coordinates
+      stroke: 'black', // Color of the line
+      strokeWidth: 2, // Thickness of the line
+      strokeDashArray: [1, 3] // Defines the dash pattern: 1 unit of dash, 3 units of gap
+    });
     // Enable object controls
+    // Add the line to the canvas
+    this.canvas.add(dottedLine);
     this.canvas.on('selection:created', (e) => this.onObjectSelected(e));
     this.canvas.on('selection:updated', (e) => this.onObjectSelected(e));
     this.canvas.on('selection:cleared', () => this.onObjectDeselected());

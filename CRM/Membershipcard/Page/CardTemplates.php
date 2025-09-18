@@ -57,13 +57,7 @@ class CRM_Membershipcard_Page_CardTemplates extends CRM_Core_Page {
 
     $templateList = [];
     while ($templates->fetch()) {
-      $templateList[] = [
-        'id' => $templates->id,
-        'name' => $templates->name,
-        'description' => $templates->description,
-        'is_active' => $templates->is_active,
-        'created_date' => $templates->created_date,
-      ];
+      $templateList[] = $templates->toArray();
     }
 
     $this->assign('templates', $templateList);

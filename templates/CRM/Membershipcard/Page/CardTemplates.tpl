@@ -42,11 +42,6 @@
           </div>
         </div>
 
-        <div class="card-toolbar" id="card-toolbar">
-          <!-- Side toggle will be added dynamically by JavaScript -->
-          <!-- Additional toolbar buttons will be added here -->
-        </div>
-
         <div class="card-settings">
           <div class="form-group">
             <label for="card-width">{ts}Width{/ts}:</label>
@@ -70,7 +65,7 @@
             <div class="form-group">
               <label for="front-bg-image">{ts}Background Image{/ts}:</label>
               <input type="file" id="front-bg-image" class="form-control-file" accept="image/*">
-              {if $template.front_background_image}
+              {if !empty($template.front_background_image)}
                 <small class="form-text text-muted">
                   {ts}Current:{/ts} {$template.front_background_image|truncate:30}
                 </small>
@@ -98,7 +93,10 @@
           </div>
         </div>
       </div>
-
+      <div class="card-toolbar" id="card-toolbar">
+        <!-- Side toggle will be added dynamically by JavaScript -->
+        <!-- Additional toolbar buttons will be added here -->
+      </div>
       <!-- Main Designer Area -->
       <div class="main-designer">
         <!-- Enhanced Token Panel with Side Recommendations -->
@@ -793,7 +791,7 @@
     <h1>{ts}Membership Card Templates{/ts}</h1>
 
     <div class="crm-submit-buttons">
-      <a href="{crmURL p='civicrm/membership-card-templates' q='action=designer'}" class="btn btn-primary">
+      <a href="{crmURL p='civicrm/membership-card-templates' q='action=add&reset=1'}" class="btn btn-primary">
         <i class="fa fa-plus"></i> {ts}Create New Template{/ts}
       </a>
     </div>
@@ -803,14 +801,17 @@
         {foreach from=$templates item=template}
           <div class="template-card">
             <div class="template-preview">
-              {if $template.front_background_image}
-                <img src="{$template.front_background_image}" alt="{$template.name}" class="template-thumbnail">
+              {if !empty($template.front_background_image)}
+                <div class="template-placeholder" style="background-color: {$template.front_background_color|default:'#ffffff'}">
+                  <i class="fa fa-credit-card fa-3x"></i>
+                  <img src="{$template.front_background_image}" alt="{$template.name}" class="template-thumbnail">
+                </div>
               {else}
                 <div class="template-placeholder" style="background-color: {$template.front_background_color|default:'#ffffff'}">
                   <i class="fa fa-credit-card fa-3x"></i>
                 </div>
               {/if}
-              {if $template.is_dual_sided}
+              {if !empty($template.is_dual_sided)}
                 <div class="dual-sided-badge">
                   <i class="fa fa-clone"></i> {ts}Dual-Sided{/ts}
                 </div>
@@ -823,15 +824,15 @@
               <div class="template-meta">
                 <small class="text-muted">
                   {$template.card_width}×{$template.card_height}px
-                  {if $template.updated_date}
-                    | {ts}Updated{/ts}: {$template.updated_date|date_format}
+                  {if $template.modified_date}
+                    | {ts}Updated{/ts}: {$template.modified_date|date_format}
                   {/if}
                 </small>
               </div>
             </div>
 
             <div class="template-actions">
-              <a href="{crmURL p='civicrm/membership-card-templates' q="action=designer&id=`$template.id`"}"
+              <a href="{crmURL p='civicrm/membership-card-templates' q="action=update&id=`$template.id`"}"
                  class="btn btn-sm btn-primary">
                 <i class="fa fa-edit"></i> {ts}Edit{/ts}
               </a>
@@ -858,7 +859,7 @@
           <i class="fa fa-credit-card fa-4x text-muted"></i>
           <h3>{ts}No Templates Found{/ts}</h3>
           <p class="text-muted">{ts}Get started by creating your first membership card template.{/ts}</p>
-          <a href="{crmURL p='civicrm/membership-card-templates' q='action=designer'}" class="btn btn-primary btn-lg">
+          <a href="{crmURL p='civicrm/membership-card-templates' q='action=add'}" class="btn btn-primary btn-lg">
             <i class="fa fa-plus"></i> {ts}Create Your First Template{/ts}
           </a>
         </div>
