@@ -32,7 +32,7 @@
 
   <!-- Summary Statistics -->
   <div class="stats-section">
-    <div class="row">
+    <div class="row" style="display: flex; flex-wrap: wrap; gap: 15px;">
       <div class="col-md-2">
         <div class="stat-card stat-total">
           <div class="stat-icon">
@@ -161,7 +161,7 @@
 
             <!-- Card Preview -->
             <div class="card-preview">
-              <div class="card-visual" style="background-color: {$card.background_color|default:'#ffffff'}; aspect-ratio: {$card.card_width}/{$card.card_height};">
+              <div class="card-visual" style="background-color: {$card.front_background_color|default:'#ffffff'}; aspect-ratio: {$card.card_width}/{$card.card_height};">
                 <div class="card-overlay">
                   <div class="card-member-info">
                     {if $card.image_URL}
@@ -527,6 +527,10 @@
     /* Statistics Cards */
     .stats-section {
       margin-bottom: 30px;
+    }
+
+    .col-md-2 {
+      width: 15%;
     }
 
     .stat-card {

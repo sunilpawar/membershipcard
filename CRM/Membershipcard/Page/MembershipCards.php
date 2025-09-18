@@ -118,12 +118,13 @@ class CRM_Membershipcard_Page_MembershipCards extends CRM_Core_Page {
         mct.name as template_name,
         mct.card_width,
         mct.card_height,
-        mct.background_color
+        mct.front_background_color,
+        mct.back_background_color
       FROM civicrm_membership_card mc
       INNER JOIN civicrm_membership m ON mc.membership_id = m.id
       INNER JOIN civicrm_contact c ON m.contact_id = c.id
-      INNER JOIN civicrm_email e ON e.contact_id = c.id and e.is_primary = 1
-      INNER JOIN civicrm_phone p ON e.contact_id = c.id and p.is_primary = 1
+      LEFT JOIN civicrm_email e ON e.contact_id = c.id and e.is_primary = 1
+      LEFT JOIN civicrm_phone p ON p.contact_id = c.id and p.is_primary = 1
       INNER JOIN civicrm_membership_type mt ON m.membership_type_id = mt.id
       INNER JOIN civicrm_membership_status ms ON m.status_id = ms.id
       INNER JOIN civicrm_membership_card_template mct ON mc.template_id = mct.id
@@ -160,7 +161,10 @@ class CRM_Membershipcard_Page_MembershipCards extends CRM_Core_Page {
         'template_name' => $dao->template_name,
         'card_width' => $dao->card_width,
         'card_height' => $dao->card_height,
-        'background_color' => $dao->background_color,
+
+        'front_background_color' => $dao->front_background_color,
+        'back_background_color' => $dao->front_background_color,
+
         'card_created_date' => $dao->card_created_date,
         'card_modified_date' => $dao->card_modified_date,
         'is_active' => $isActive,

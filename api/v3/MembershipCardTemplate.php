@@ -230,9 +230,7 @@ function civicrm_api3_membership_card_template_get($params) {
     }
 
     $sql = "
-      SELECT id, name, description, card_width, card_height,
-             background_color, background_image, elements, is_active,
-             created_date, modified_date
+      SELECT *
       FROM civicrm_membership_card_template
       WHERE 1=1 {$whereClause}
       {$orderBy}
@@ -249,13 +247,10 @@ function civicrm_api3_membership_card_template_get($params) {
         'description' => $dao->description,
         'card_width' => $dao->card_width,
         'card_height' => $dao->card_height,
-        'background_color' => $dao->background_color,
         'front_background_color' => $dao->front_background_color,
         'back_background_color' => $dao->back_background_color,
-        'background_image' => $dao->background_image,
         'front_background_image' => $dao->front_background_image,
         'back_background_image' => $dao->back_background_image,
-        'elements' => $dao->elements,
         'front_elements' => $dao->front_elements,
         'back_elements' => $dao->back_elements,
         'is_active' => $dao->is_active,
@@ -265,10 +260,6 @@ function civicrm_api3_membership_card_template_get($params) {
       ];
 
       // Decode elements if requested
-      if (!empty($params['decode_elements']) && !empty($template['elements'])) {
-        $template['elements_decoded'] = json_decode($template['elements'], TRUE);
-      }
-
       if (!empty($params['decode_front_elements']) && !empty($template['front_elements'])) {
         $template['front_elements_decoded'] = json_decode($template['front_elements'], TRUE);
       }
@@ -472,7 +463,7 @@ function _civicrm_api3_membership_card_template_copy_spec(&$spec) {
  * @return array API result descriptor
  * @throws API_Exception
  */
-function civicrm_api3_membership_card_template_export($params) {
+function civicrm_api3_membership_card_template_export2($params) {
   if (empty($params['id'])) {
     throw new API_Exception("Missing required field: id");
   }
@@ -541,7 +532,7 @@ function _civicrm_api3_membership_card_template_export_spec(&$spec) {
  * @return array API result descriptor
  * @throws API_Exception
  */
-function civicrm_api3_membership_card_template_import($params) {
+function civicrm_api3_membership_card_template_import2($params) {
   if (empty($params['template_data'])) {
     throw new API_Exception("Missing required field: template_data");
   }
@@ -632,4 +623,661 @@ function _civicrm_api3_membership_card_template_import_spec(&$spec) {
   $spec['card_height']['description'] = 'Height of the card in pixels';
   $spec['card_height']['type'] = CRM_Utils_Type::T_INT;
   $spec['card_height']['api.default'] = 220;
+}
+
+
+/**
+ * API function to get template preview data
+ */
+function civicrm_api3_membership_card_template_preview($params) {
+  try {
+    // Validate template ID
+    if (empty($params['id'])) {
+      throw new API_Exception('Template ID is required');
+    }
+
+    // Get template
+    $template = civicrm_api3('MembershipCardTemplate', 'getsingle', [
+      'id' => $params['id'],
+    ]);
+
+    // Get sample data for preview
+    $sampleData = _membershipcard_get_sample_preview_data();
+
+    // Generate preview HTML
+    $previewHtml = _membershipcard_generate_preview_html($template, $sampleData);
+
+    return civicrm_api3_create_success([
+      'template' => $template,
+      'preview_html' => $previewHtml,
+      'sample_data' => $sampleData,
+    ]);
+
+  } catch (Exception $e) {
+    throw new API_Exception('Error generating preview: ' . $e->getMessage());
+  }
+}
+
+/**
+ * API function to duplicate a template
+ */
+function civicrm_api3_membership_card_template_duplicate($params) {
+  try {
+    // Validate template ID
+    if (empty($params['id'])) {
+      throw new API_Exception('Template ID is required');
+    }
+
+    // Get original template
+    $originalTemplate = civicrm_api3('MembershipCardTemplate', 'getsingle', [
+      'id' => $params['id'],
+    ]);
+
+    // Create duplicate
+    $duplicateData = $originalTemplate;
+    unset($duplicateData['id']);
+
+    // Generate unique name
+    $baseName = $originalTemplate['name'];
+    $copyNumber = 1;
+    $newName = $baseName . ' - Copy';
+
+    // Check if name already exists and increment if needed
+    while (_membershipcard_template_name_exists($newName)) {
+      $copyNumber++;
+      $newName = $baseName . ' - Copy ' . $copyNumber;
+    }
+
+    $duplicateData['name'] = $newName;
+    $duplicateData['created_date'] = date('Y-m-d H:i:s');
+    $duplicateData['modified_date'] = date('Y-m-d H:i:s');
+
+    $result = civicrm_api3('MembershipCardTemplate', 'create', $duplicateData);
+
+    return civicrm_api3_create_success([
+      'id' => $result['id'],
+      'name' => $newName,
+      'message' => ts('Template duplicated successfully'),
+    ]);
+
+  } catch (Exception $e) {
+    throw new API_Exception('Error duplicating template: ' . $e->getMessage());
+  }
+}
+
+/**
+ * API function to check template usage
+ */
+function civicrm_api3_membership_card_template_getusage($params) {
+  try {
+    // Validate template ID
+    if (empty($params['id'])) {
+      throw new API_Exception('Template ID is required');
+    }
+
+    // Count usage
+    $usageCount = _membershipcard_get_template_usage_count($params['id']);
+
+    // Get detailed usage if requested
+    $detailedUsage = [];
+    if (!empty($params['detailed']) && $params['detailed']) {
+      $detailedUsage = _membershipcard_get_template_usage_details($params['id']);
+    }
+
+    return civicrm_api3_create_success([
+      'template_id' => $params['id'],
+      'usage_count' => $usageCount,
+      'detailed_usage' => $detailedUsage,
+      'can_delete' => ($usageCount == 0),
+    ]);
+
+  } catch (Exception $e) {
+    throw new API_Exception('Error checking template usage: ' . $e->getMessage());
+  }
+}
+
+/**
+ * Enhanced delete function with usage checking
+ */
+function civicrm_api3_membership_card_template_safedelete($params) {
+  try {
+    // Validate template ID
+    if (empty($params['id'])) {
+      throw new API_Exception('Template ID is required');
+    }
+
+    // Check usage
+    $usageCount = _membershipcard_get_template_usage_count($params['id']);
+
+    if ($usageCount > 0 && empty($params['force'])) {
+      throw new API_Exception(
+        ts('Cannot delete template. It is currently being used by %1 membership card(s).',
+          [1 => $usageCount])
+      );
+    }
+
+    // If force delete is enabled, handle dependent records
+    if ($usageCount > 0 && !empty($params['force'])) {
+      _membershipcard_handle_template_dependencies($params['id'], $params);
+    }
+
+    // Delete the template
+    $result = civicrm_api3('MembershipCardTemplate', 'delete', [
+      'id' => $params['id'],
+    ]);
+
+    return civicrm_api3_create_success([
+      'id' => $params['id'],
+      'message' => ts('Template deleted successfully'),
+      'usage_count_before_delete' => $usageCount,
+    ]);
+
+  } catch (Exception $e) {
+    throw new API_Exception('Error deleting template: ' . $e->getMessage());
+  }
+}
+
+/**
+ * Helper function to get sample preview data
+ */
+function _membershipcard_get_sample_preview_data() {
+  return [
+    'contact' => [
+      'display_name' => 'John Doe',
+      'first_name' => 'John',
+      'last_name' => 'Doe',
+      'email' => 'john.doe@example.com',
+      'phone' => '(555) 123-4567',
+      'street_address' => '123 Main Street',
+      'city' => 'Anytown',
+      'state_province' => 'CA',
+      'postal_code' => '12345',
+      'image_URL' => CRM_Utils_System::url('civicrm/contact/imagefile', 'photo=sample'),
+    ],
+    'membership' => [
+      'membership_type' => 'Gold Member',
+      'status' => 'Current',
+      'start_date' => date('Y-m-d'),
+      'end_date' => date('Y-m-d', strtotime('+1 year')),
+      'join_date' => date('Y-m-d'),
+      'membership_id' => 'MEM001234',
+      'source' => 'Online Registration',
+    ],
+    'organization' => [
+      'organization_name' => 'Sample Organization',
+      'organization_logo' => CRM_Utils_System::url('civicrm/contact/imagefile', 'photo=org_logo'),
+      'organization_address' => '456 Business Ave, Business City, BC 67890',
+      'organization_phone' => '(555) 987-6543',
+      'organization_email' => 'info@sampleorg.com',
+    ],
+    'system' => [
+      'current_date' => date('Y-m-d'),
+      'qr_code' => _membershipcard_generate_sample_qr(),
+      'barcode' => _membershipcard_generate_sample_barcode(),
+    ],
+  ];
+}
+
+/**
+ * Helper function to generate preview HTML
+ */
+function _membershipcard_generate_preview_html($template, $sampleData) {
+  $elements = json_decode($template['elements'], TRUE);
+  if (!$elements) {
+    return '<div class="preview-error">No elements found in template</div>';
+  }
+
+  $html = '<div class="card-preview" style="width: ' . $template['card_width'] . 'px; height: ' . $template['card_height'] . 'px; position: relative; background: ' . ($template['background_color'] ?? '#ffffff') . ';">';
+
+  foreach ($elements as $element) {
+    $html .= _membershipcard_render_preview_element($element, $sampleData);
+  }
+
+  $html .= '</div>';
+  return $html;
+}
+
+/**
+ * Helper function to render individual elements
+ */
+function _membershipcard_render_preview_element($element, $sampleData) {
+  $style = 'position: absolute; ';
+  $style .= 'left: ' . ($element['left'] ?? 0) . 'px; ';
+  $style .= 'top: ' . ($element['top'] ?? 0) . 'px; ';
+  $style .= 'width: ' . ($element['width'] ?? 100) . 'px; ';
+  $style .= 'height: ' . ($element['height'] ?? 30) . 'px; ';
+
+  if (!empty($element['fontFamily'])) {
+    $style .= 'font-family: ' . $element['fontFamily'] . '; ';
+  }
+  if (!empty($element['fontSize'])) {
+    $style .= 'font-size: ' . $element['fontSize'] . 'px; ';
+  }
+  if (!empty($element['fill'])) {
+    $style .= 'color: ' . $element['fill'] . '; ';
+  }
+
+  $html = '<div style="' . $style . '">';
+
+  switch ($element['type']) {
+    case 'text':
+      $text = $element['text'] ?? '';
+      $text = _membershipcard_replace_tokens($text, $sampleData);
+      $html .= htmlspecialchars($text);
+      break;
+
+    case 'image':
+      $src = $element['src'] ?? '';
+      $src = _membershipcard_replace_tokens($src, $sampleData);
+      $html .= '<img src="' . htmlspecialchars($src) . '" style="width: 100%; height: 100%; object-fit: cover;" alt="Card Image" />';
+      break;
+
+    case 'qrcode':
+      $qrData = $element['data'] ?? '';
+      $qrData = _membershipcard_replace_tokens($qrData, $sampleData);
+      $html .= '<div style="background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 10px;">QR Code</div>';
+      break;
+
+    case 'barcode':
+      $barcodeData = $element['data'] ?? '';
+      $barcodeData = _membershipcard_replace_tokens($barcodeData, $sampleData);
+      $html .= '<div style="background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 10px;">Barcode</div>';
+      break;
+
+    default:
+      $html .= '<span style="color: #999;">Unknown element</span>';
+  }
+
+  $html .= '</div>';
+  return $html;
+}
+
+/**
+ * Helper function to replace tokens with sample data
+ */
+function _membershipcard_replace_tokens($text, $sampleData) {
+  // Replace contact tokens
+  foreach ($sampleData['contact'] as $key => $value) {
+    $text = str_replace('{contact.' . $key . '}', $value, $text);
+  }
+
+  // Replace membership tokens
+  foreach ($sampleData['membership'] as $key => $value) {
+    $text = str_replace('{membership.' . $key . '}', $value, $text);
+  }
+
+  // Replace organization tokens
+  foreach ($sampleData['organization'] as $key => $value) {
+    $text = str_replace('{organization.' . $key . '}', $value, $text);
+  }
+
+  // Replace system tokens
+  foreach ($sampleData['system'] as $key => $value) {
+    $text = str_replace('{system.' . $key . '}', $value, $text);
+  }
+
+  return $text;
+}
+
+/**
+ * Helper function to check if template name exists
+ */
+function _membershipcard_template_name_exists($name) {
+  try {
+    $result = civicrm_api3('MembershipCardTemplate', 'getcount', [
+      'name' => $name,
+    ]);
+    return $result > 0;
+  } catch (Exception $e) {
+    return FALSE;
+  }
+}
+
+/**
+ * Helper function to get template usage count
+ */
+function _membershipcard_get_template_usage_count($templateId) {
+  try {
+    // Count membership cards using this template
+    $cardCount = civicrm_api3('MembershipCard', 'getcount', [
+      'template_id' => $templateId,
+    ]);
+
+    // You might also want to check other places where template is used
+    // For example, scheduled jobs, default settings, etc.
+
+    return $cardCount;
+  } catch (Exception $e) {
+    return 0;
+  }
+}
+
+/**
+ * Helper function to get detailed template usage
+ */
+function _membershipcard_get_template_usage_details($templateId) {
+  $details = [];
+
+  try {
+    // Get membership cards using this template
+    $cards = civicrm_api3('MembershipCard', 'get', [
+      'template_id' => $templateId,
+      'options' => ['limit' => 100],
+    ]);
+
+    foreach ($cards['values'] as $card) {
+      // Get membership details
+      try {
+        $membership = civicrm_api3('Membership', 'getsingle', [
+          'id' => $card['membership_id'],
+        ]);
+
+        // Get contact details
+        $contact = civicrm_api3('Contact', 'getsingle', [
+          'id' => $membership['contact_id'],
+        ]);
+
+        $details[] = [
+          'card_id' => $card['id'],
+          'membership_id' => $membership['id'],
+          'contact_name' => $contact['display_name'],
+          'membership_type' => $membership['membership_type_id'],
+          'created_date' => $card['created_date'],
+        ];
+      } catch (Exception $e) {
+        // Skip if we can't get details
+        continue;
+      }
+    }
+
+  } catch (Exception $e) {
+    // Return empty if there's an error
+  }
+
+  return $details;
+}
+
+/**
+ * Helper function to handle template dependencies when force deleting
+ */
+function _membershipcard_handle_template_dependencies($templateId, $params) {
+  $action = $params['dependency_action'] ?? 'reassign';
+
+  switch ($action) {
+    case 'delete_cards':
+      // Delete all cards using this template
+      $cards = civicrm_api3('MembershipCard', 'get', [
+        'template_id' => $templateId,
+      ]);
+
+      foreach ($cards['values'] as $card) {
+        civicrm_api3('MembershipCard', 'delete', [
+          'id' => $card['id'],
+        ]);
+      }
+      break;
+
+    case 'reassign':
+      // Reassign cards to another template
+      $newTemplateId = $params['new_template_id'] ?? NULL;
+      if ($newTemplateId) {
+        $cards = civicrm_api3('MembershipCard', 'get', [
+          'template_id' => $templateId,
+        ]);
+
+        foreach ($cards['values'] as $card) {
+          civicrm_api3('MembershipCard', 'create', [
+            'id' => $card['id'],
+            'template_id' => $newTemplateId,
+          ]);
+        }
+      }
+      break;
+
+    case 'archive':
+      // Archive the cards instead of deleting them
+      $cards = civicrm_api3('MembershipCard', 'get', [
+        'template_id' => $templateId,
+      ]);
+
+      foreach ($cards['values'] as $card) {
+        civicrm_api3('MembershipCard', 'create', [
+          'id' => $card['id'],
+          'is_active' => 0,
+          'template_id' => NULL,
+        ]);
+      }
+      break;
+  }
+}
+
+/**
+ * Helper function to generate sample QR code data URL
+ */
+function _membershipcard_generate_sample_qr() {
+  // Return a simple placeholder QR code data URL
+  // In a real implementation, you would generate an actual QR code
+  return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAFYSURBVBiVY/wPBAxUAGMjIyMuNjY2FhsbGxs7OzsbBwcHGycnJwcXFxcHNzc3Bzc3Nwc/Pz8HPz8/B4FAAA==';
+}
+
+/**
+ * Helper function to generate sample barcode data URL
+ */
+function _membershipcard_generate_sample_barcode() {
+  // Return a simple placeholder barcode data URL
+  // In a real implementation, you would generate an actual barcode
+  return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAFYSURBVBiVY/wPBAxUAGMjIyMuNjY2FhsbGxs7OzsbBwcHGycnJwcXFxcHNzc3Bzc3Nwc/Pz8HPz8/B4FAAA==';
+}
+
+/**
+ * Batch operations for templates
+ */
+function civicrm_api3_membership_card_template_batch_duplicate($params) {
+  try {
+    $templateIds = $params['template_ids'] ?? [];
+    $results = [];
+    $errors = [];
+
+    foreach ($templateIds as $templateId) {
+      try {
+        $result = civicrm_api3('MembershipCardTemplate', 'duplicate', [
+          'id' => $templateId,
+        ]);
+        $results[] = $result['values'];
+      } catch (Exception $e) {
+        $errors[] = [
+          'template_id' => $templateId,
+          'error' => $e->getMessage(),
+        ];
+      }
+    }
+
+    return civicrm_api3_create_success([
+      'successes' => $results,
+      'errors' => $errors,
+      'total_processed' => count($templateIds),
+      'successful_count' => count($results),
+      'error_count' => count($errors),
+    ]);
+
+  } catch (Exception $e) {
+    throw new API_Exception('Error in batch duplicate operation: ' . $e->getMessage());
+  }
+}
+
+/**
+ * Export template configuration
+ */
+function civicrm_api3_membership_card_template_export($params) {
+  try {
+    $templateId = $params['id'] ?? NULL;
+    $format = $params['format'] ?? 'json';
+
+    if (!$templateId) {
+      throw new API_Exception('Template ID is required');
+    }
+
+    // Get template data
+    $template = civicrm_api3('MembershipCardTemplate', 'getsingle', [
+      'id' => $templateId,
+    ]);
+
+    // Remove system-specific fields
+    unset($template['id']);
+    unset($template['created_date']);
+    unset($template['modified_date']);
+
+    // Add export metadata
+    $exportData = [
+      'export_version' => '1.0',
+      'export_date' => date('Y-m-d H:i:s'),
+      'extension_version' => _membershipcard_get_extension_version(),
+      'template' => $template,
+    ];
+
+    switch ($format) {
+      case 'json':
+        $content = json_encode($exportData, JSON_PRETTY_PRINT);
+        $contentType = 'application/json';
+        $filename = 'template_' . $template['name'] . '.json';
+        break;
+
+      case 'xml':
+        $content = _membershipcard_array_to_xml($exportData);
+        $contentType = 'application/xml';
+        $filename = 'template_' . $template['name'] . '.xml';
+        break;
+
+      default:
+        throw new API_Exception('Unsupported export format: ' . $format);
+    }
+
+    return civicrm_api3_create_success([
+      'content' => $content,
+      'content_type' => $contentType,
+      'filename' => $filename,
+      'template_name' => $template['name'],
+    ]);
+
+  } catch (Exception $e) {
+    throw new API_Exception('Error exporting template: ' . $e->getMessage());
+  }
+}
+
+/**
+ * Import template configuration
+ */
+function civicrm_api3_membership_card_template_import($params) {
+  try {
+    $content = $params['content'] ?? NULL;
+    $format = $params['format'] ?? 'json';
+    $overwrite = $params['overwrite'] ?? FALSE;
+
+    if (!$content) {
+      throw new API_Exception('Content is required for import');
+    }
+
+    // Parse content based on format
+    switch ($format) {
+      case 'json':
+        $importData = json_decode($content, TRUE);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+          throw new API_Exception('Invalid JSON format');
+        }
+        break;
+
+      case 'xml':
+        $importData = _membershipcard_xml_to_array($content);
+        break;
+
+      default:
+        throw new API_Exception('Unsupported import format: ' . $format);
+    }
+
+    // Validate import data
+    if (!isset($importData['template'])) {
+      throw new API_Exception('Invalid import file: template data not found');
+    }
+
+    $templateData = $importData['template'];
+
+    // Check if template with same name exists
+    $existingTemplate = NULL;
+    try {
+      $existingTemplate = civicrm_api3('MembershipCardTemplate', 'getsingle', [
+        'name' => $templateData['name'],
+      ]);
+    } catch (Exception $e) {
+      // Template doesn't exist, which is fine
+    }
+
+    if ($existingTemplate && !$overwrite) {
+      throw new API_Exception('Template with name "' . $templateData['name'] . '" already exists. Use overwrite=1 to replace it.');
+    }
+
+    // Import the template
+    if ($existingTemplate && $overwrite) {
+      $templateData['id'] = $existingTemplate['id'];
+    }
+
+    $templateData['modified_date'] = date('Y-m-d H:i:s');
+    if (!isset($templateData['created_date'])) {
+      $templateData['created_date'] = date('Y-m-d H:i:s');
+    }
+
+    $result = civicrm_api3('MembershipCardTemplate', 'create', $templateData);
+
+    return civicrm_api3_create_success([
+      'template_id' => $result['id'],
+      'template_name' => $templateData['name'],
+      'action' => $existingTemplate ? 'updated' : 'created',
+      'import_version' => $importData['export_version'] ?? 'unknown',
+    ]);
+
+  } catch (Exception $e) {
+    throw new API_Exception('Error importing template: ' . $e->getMessage());
+  }
+}
+
+/**
+ * Helper function to get extension version
+ */
+function _membershipcard_get_extension_version() {
+  // Return the current extension version
+  // This should be updated to match your extension's version
+  return '1.0.0';
+}
+
+/**
+ * Helper function to convert array to XML
+ */
+function _membershipcard_array_to_xml($array, $rootElement = 'template_export') {
+  $xml = new SimpleXMLElement('<' . $rootElement . '/>');
+  _membershipcard_array_to_xml_recursive($array, $xml);
+  return $xml->asXML();
+}
+
+/**
+ * Recursive helper for array to XML conversion
+ */
+function _membershipcard_array_to_xml_recursive($array, &$xml) {
+  foreach ($array as $key => $value) {
+    if (is_array($value)) {
+      $subnode = $xml->addChild($key);
+      _membershipcard_array_to_xml_recursive($value, $subnode);
+    } else {
+      $xml->addChild($key, htmlspecialchars($value));
+    }
+  }
+}
+
+/**
+ * Helper function to convert XML to array
+ */
+function _membershipcard_xml_to_array($xmlString) {
+  $xml = simplexml_load_string($xmlString);
+  if ($xml === FALSE) {
+    throw new API_Exception('Invalid XML format');
+  }
+  return json_decode(json_encode($xml), TRUE);
 }

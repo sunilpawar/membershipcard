@@ -804,7 +804,7 @@
               {if !empty($template.front_background_image)}
                 <div class="template-placeholder" style="background-color: {$template.front_background_color|default:'#ffffff'}">
                   <i class="fa fa-credit-card fa-3x"></i>
-                  <img src="{$template.front_background_image}" alt="{$template.name}" class="template-thumbnail">
+                  <img src="{$template.front_background_image}" alt="{$template.name|escape}" class="template-thumbnail">
                 </div>
               {else}
                 <div class="template-placeholder" style="background-color: {$template.front_background_color|default:'#ffffff'}">
@@ -819,8 +819,8 @@
             </div>
 
             <div class="template-info">
-              <h4>{$template.name}</h4>
-              <p class="text-muted">{$template.description}</p>
+              <h4>{$template.name|escape}</h4>
+              <p class="text-muted">{$template.description|escape|truncate:100}</p>
               <div class="template-meta">
                 <small class="text-muted">
                   {$template.card_width}×{$template.card_height}px
@@ -836,22 +836,62 @@
                  class="btn btn-sm btn-primary">
                 <i class="fa fa-edit"></i> {ts}Edit{/ts}
               </a>
+              {*
               <a href="{crmURL p='civicrm/membership-card-templates' q="action=preview&id=`$template.id`"}"
                  class="btn btn-sm btn-secondary">
                 <i class="fa fa-eye"></i> {ts}Preview{/ts}
               </a>
-              <a href="{crmURL p='civicrm/membership-card-templates' q="action=duplicate&id=`$template.id`"}"
+              *}
+              <a href="{crmURL p='civicrm/membership-card-templates' q="action=copy&id=`$template.id`"}"
                  class="btn btn-sm btn-info">
                 <i class="fa fa-copy"></i> {ts}Duplicate{/ts}
               </a>
               <a href="{crmURL p='civicrm/membership-card-templates' q="action=delete&id=`$template.id`"}"
-                 class="btn btn-sm btn-danger"
-                 onclick="return confirm('{ts escape="js"}Are you sure you want to delete this template?{/ts}')">
+                 class="btn btn-sm btn-danger {if $template.usage_count > 0}disabled{/if}"
+                 onclick="return confirm('{ts escape="js"}Are you sure you want to delete this template?{/ts}')"
+                 title="{if $template.usage_count > 0}{ts}Cannot delete - template is in use{/ts}{else}{ts}Delete Template{/ts}{/if}">
                 <i class="fa fa-trash"></i> {ts}Delete{/ts}
               </a>
             </div>
           </div>
         {/foreach}
+      </div>
+      {* Preview Modal *}
+      <div id="template-preview-modal" class="ui-dialog ui-widget ui-widget-content ui-corner-all" style="display: none;">
+        <div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix">
+          <span class="ui-dialog-title" id="ui-id-1">{ts}Template Preview{/ts}</span>
+          <button type="button" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-icon-only ui-dialog-titlebar-close" title="Close">
+            <span class="ui-button-icon-primary ui-icon ui-icon-closethick"></span>
+            <span class="ui-button-text">Close</span>
+          </button>
+        </div>
+        <div class="ui-dialog-content ui-widget-content">
+          <div id="template-preview-content">
+            <div class="preview-loading">
+              <i class="crm-i fa-spinner fa-spin"></i> {ts}Loading preview...{/ts}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {* Confirmation Modal for Deletion *}
+      <div id="delete-confirmation-modal" class="ui-dialog ui-widget ui-widget-content ui-corner-all" style="display: none;">
+        <div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix">
+          <span class="ui-dialog-title">{ts}Confirm Deletion{/ts}</span>
+          <button type="button" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-icon-only ui-dialog-titlebar-close" title="Close">
+            <span class="ui-button-icon-primary ui-icon ui-icon-closethick"></span>
+            <span class="ui-button-text">Close</span>
+          </button>
+        </div>
+        <div class="ui-dialog-content ui-widget-content">
+          <div class="delete-confirmation-content">
+            <p class="delete-message"></p>
+            <div class="delete-actions">
+              <button type="button" class="button cancel-delete">{ts}Cancel{/ts}</button>
+              <button type="button" class="button button-danger confirm-delete">{ts}Delete{/ts}</button>
+            </div>
+          </div>
+        </div>
       </div>
     {else}
       <div class="empty-state">
@@ -973,6 +1013,128 @@
       .template-actions {
         justify-content: center;
       }
+    }
+
+    /* Template listing styles */
+    .template-row:hover {
+      background-color: #f5f5f5;
+    }
+
+    .template-name strong {
+      color: #1a73e8;
+    }
+
+    .template-actions .disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25em 0.4em;
+      font-size: 75%;
+      font-weight: 700;
+      line-height: 1;
+      text-align: center;
+      white-space: nowrap;
+      vertical-align: baseline;
+      border-radius: 0.25rem;
+    }
+
+    .badge-info {
+      background-color: #17a2b8;
+      color: #fff;
+    }
+
+    .badge-secondary {
+      background-color: #6c757d;
+      color: #fff;
+    }
+
+    /* Preview Modal Styles */
+    #template-preview-modal {
+      width: 80%;
+      max-width: 900px;
+      max-height: 80vh;
+    }
+
+    #template-preview-content {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .card-preview {
+      display: inline-block;
+      border: 2px solid #ddd;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin: 20px;
+      overflow: hidden;
+    }
+
+    .preview-loading {
+      padding: 40px;
+      font-size: 16px;
+      color: #666;
+    }
+
+    .preview-error {
+      color: #d32f2f;
+      padding: 20px;
+      border: 2px dashed #d32f2f;
+      background-color: #ffebee;
+    }
+
+    /* Delete Confirmation Modal */
+    #delete-confirmation-modal {
+      width: 400px;
+    }
+
+    .delete-confirmation-content {
+      padding: 20px;
+    }
+
+    .delete-message {
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .delete-actions {
+      text-align: right;
+    }
+
+    .delete-actions .button {
+      margin-left: 10px;
+    }
+
+    .button-danger {
+      background-color: #d32f2f !important;
+      color: white !important;
+      border-color: #d32f2f !important;
+    }
+
+    .button-danger:hover {
+      background-color: #b71c1c !important;
+      border-color: #b71c1c !important;
+    }
+
+    /* Action messages */
+    .action-message {
+      padding: 10px 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border: 1px solid transparent;
+    }
+
+    .action-message.success {
+      color: #155724;
+      background-color: #d4edda;
+      border-color: #c3e6cb;
+    }
+
+    .action-message.error {
+      color: #721c24;
+      background-color: #f8d7da;
+      border-color: #f5c6cb;
     }
   </style>
 {/literal}
