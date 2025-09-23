@@ -113,4 +113,32 @@ class CRM_Membershipcard_API_MembershipCardTemplate {
 
     return ['is_error' => 0];
   }
+
+  public static function cardTemplates() {
+    $result = civicrm_api3('MembershipCardTemplate', 'get', [
+      'sequential' => 1,
+      'options' => ['sort' => 'name ASC'],
+    ]);
+    $templates = [];
+    foreach ($result['values'] as $template) {
+      $templates[$template['id']] = $template['name'];
+    }
+    return $templates;
+  }
+
+  /**
+   * Get Membership Type settings.
+   *
+   * @param $typeID
+   * @return array
+   */
+  public static function getCardTemplatesSettings($typeID) {
+    $result = civicrm_api3('MembershipType', 'getsingle', [
+      'sequential' => 1,
+      'return' => ["template_id"],
+      'id' => $typeID,
+    ]);
+    unset($result['id']);
+    return $result;
+  }
 }

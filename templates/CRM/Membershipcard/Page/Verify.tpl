@@ -54,7 +54,7 @@
                 <tr>
                   <td><strong>{ts}Valid Until{/ts}:</strong></td>
                   <td>
-                    {assign var="end_date" value=$verification_result.end_date|strtotime}
+                    {assign var="end_date" value=$verification_result.end_date|crmDate}
                     {assign var="current_date" value=$smarty.now}
                     {if $end_date > $current_date}
                       <span class="text-success">{$verification_result.end_date|crmDate}</span>

@@ -7,13 +7,6 @@
     <desc>Manage membership card templates</desc>
     <page_callback>CRM_Membershipcard_Page_CardTemplates</page_callback>
     <access_arguments>administer CiviCRM</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>1</is_exposed>
-    <module_data/>
-    <weight>85</weight>
   </item>
   <!-- Add New Template -->
   <item>
@@ -22,13 +15,6 @@
     <desc>Create a new membership card template</desc>
     <page_callback>CRM_Membershipcard_Form_CardTemplates</page_callback>
     <access_arguments>administer CiviCRM</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>1</weight>
   </item>
   <!-- Edit Template -->
   <item>
@@ -37,13 +23,6 @@
     <desc>Edit membership card template</desc>
     <page_callback>CRM_Membershipcard_Form_CardTemplates</page_callback>
     <access_arguments>administer CiviCRM</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>2</weight>
   </item>
   <!-- Membership Cards Management -->
   <item>
@@ -52,28 +31,14 @@
     <desc>Manage membership cards</desc>
     <page_callback>CRM_Membershipcard_Page_MembershipCards</page_callback>
     <access_arguments>access CiviMember</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>1</is_exposed>
-    <module_data/>
-    <weight>86</weight>
   </item>
   <!-- Generate Card -->
   <item>
-    <path>civicrm/membership-card/generate</path>
+    <path>civicrm/membership-card/bulk-generate</path>
     <title>Generate Membership Card</title>
     <desc>Generate a membership card</desc>
-    <page_callback>CRM_Membershipcard_Page_Generate</page_callback>
-    <access_arguments>access CiviMember</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>1</weight>
+    <page_callback>CRM_Membershipcard_Form_BulkGenerate</page_callback>
+    <access_arguments>administer CiviCRM</access_arguments>
   </item>
   <!-- Download Card -->
   <item>
@@ -82,13 +47,6 @@
     <desc>Download a membership card</desc>
     <page_callback>CRM_Membershipcard_Page_Download</page_callback>
     <access_arguments>access CiviMember</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>2</weight>
   </item>
   <!-- Verify Card -->
   <item>
@@ -97,13 +55,7 @@
     <desc>Verify a membership card</desc>
     <page_callback>CRM_Membershipcard_Page_Verify</page_callback>
     <access_arguments>access CiviCRM</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
     <is_public>1</is_public>
-    <is_exposed>1</is_exposed>
-    <module_data/>
-    <weight>3</weight>
   </item>
   <!-- Email Card -->
   <item>
@@ -112,28 +64,14 @@
     <desc>Email a membership card</desc>
     <page_callback>CRM_Membershipcard_Form_Email</page_callback>
     <access_arguments>access CiviMember</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>4</weight>
   </item>
   <!-- Bulk Generate Cards -->
   <item>
-    <path>civicrm/membership-cards/bulk-generate</path>
+    <path>civicrm/membership/generate-card</path>
     <title>Bulk Generate Cards</title>
     <desc>Generate multiple membership cards</desc>
-    <page_callback>CRM_Membershipcard_Form_BulkGenerate</page_callback>
+    <page_callback>CRM_Membershipcard_API_MembershipCard::generateCard</page_callback>
     <access_arguments>access CiviMember</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>5</weight>
   </item>
   <!-- Template Preview -->
   <item>
@@ -142,13 +80,6 @@
     <desc>Preview a membership card template</desc>
     <page_callback>CRM_Membershipcard_Page_Preview</page_callback>
     <access_arguments>access CiviMember</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>6</weight>
   </item>
   <!-- Template Export -->
   <item>
@@ -157,13 +88,6 @@
     <desc>Export a membership card template</desc>
     <page_callback>CRM_Membershipcard_Page_Export</page_callback>
     <access_arguments>administer CiviCRM</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>7</weight>
   </item>
   <!-- Template Import -->
   <item>
@@ -172,28 +96,14 @@
     <desc>Import a membership card template</desc>
     <page_callback>CRM_Membershipcard_Form_Import</page_callback>
     <access_arguments>administer CiviCRM</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>8</weight>
   </item>
-  <!-- Settings -->
+
   <item>
     <path>civicrm/membership-card/settings</path>
     <title>Membership Card Settings</title>
     <desc>Configure membership card settings</desc>
     <page_callback>CRM_Membershipcard_Form_Settings</page_callback>
     <access_arguments>administer CiviCRM</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>9</weight>
   </item>
   <!-- Card Statistics -->
   <item>
@@ -202,13 +112,6 @@
     <desc>View membership card usage statistics</desc>
     <page_callback>CRM_Membershipcard_Page_Statistics</page_callback>
     <access_arguments>access CiviMember</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>10</weight>
   </item>
   <!-- API Documentation -->
   <item>
@@ -217,13 +120,6 @@
     <desc>Membership card API documentation</desc>
     <page_callback>CRM_Membershipcard_Page_ApiDocs</page_callback>
     <access_arguments>administer CiviCRM</access_arguments>
-    <type>1</type>
-    <page_type>1</page_type>
-    <skipBreadcrumb>0</skipBreadcrumb>
-    <is_public>0</is_public>
-    <is_exposed>0</is_exposed>
-    <module_data/>
-    <weight>11</weight>
   </item>
   <item>
     <path>civicrm/membershipcard-list</path>

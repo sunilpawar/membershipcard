@@ -154,148 +154,142 @@
 
   <!-- Cards Grid -->
   {if $cards}
-    <div class="cards-grid-section">
-      <div class="cards-grid">
+    <div class="membership-cards-table-section">
+      <table class="table table-striped table-hover">
+        <thead>
+        <tr>
+          <th>{ts}Member{/ts}</th>
+          <th>{ts}Type{/ts}</th>
+          <th>{ts}Status{/ts}</th>
+          <th>{ts}Expires{/ts}</th>
+          <th>{ts}Template{/ts}</th>
+          <th>{ts}Generated{/ts}</th>
+          <th class="text-center">{ts}Actions{/ts}</th>
+        </tr>
+        </thead>
+        <tbody>
         {foreach from=$cards item=card}
-          <div class="membership-card-item {if $card.is_expired}card-expired{elseif $card.days_until_expiry <= 30}card-expiring{/if}" data-card-id="{$card.card_id}">
+          <tr class="membership-card-row {if $card.is_expired}card-expired{elseif $card.days_until_expiry <= 30}card-expiring{/if}" data-card-id="{$card.card_id}">
 
-            <!-- Card Preview -->
-            <div class="card-preview">
-              <div class="card-visual" style="background-color: {$card.front_background_color|default:'#ffffff'}; aspect-ratio: {$card.card_width}/{$card.card_height};">
-                <div class="card-overlay">
-                  <div class="card-member-info">
-                    {if $card.image_URL}
-                      <div class="member-photo">
-                        <img src="{$card.image_URL}" alt="{$card.display_name}" />
-                      </div>
-                    {/if}
-                    <div class="member-details">
-                      <div class="member-name">{$card.display_name}</div>
-                      <div class="member-type">{$card.membership_type_name}</div>
-                      <div class="member-id">ID: {$card.membership_id}</div>
-                    </div>
-                  </div>
-
-                  <div class="card-status-badge">
-                    {if $card.is_active}
-                      <span class="badge badge-success">{ts}Active{/ts}</span>
-                    {elseif $card.is_expired}
-                      <span class="badge badge-danger">{ts}Expired{/ts}</span>
-                    {else}
-                      <span class="badge badge-warning">{$card.membership_status_label}</span>
-                    {/if}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Card Information -->
-            <div class="card-info">
-              <div class="card-header">
-                <h4 class="card-member-name">
-                  <a href="{$card.contact_url}" title="{ts}View Contact{/ts}">
-                    {$card.display_name}
-                  </a>
-                </h4>
-                <div class="card-metadata">
-                  <span class="card-template" title="{ts}Template{/ts}: {$card.template_name}">
-                    <i class="fa fa-file-text-o"></i> {$card.template_name}
-                  </span>
-                </div>
-              </div>
-
-              <div class="card-details">
-                <div class="detail-row">
-                  <span class="detail-label">{ts}Type{/ts}:</span>
-                  <span class="detail-value">{$card.membership_type_name}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">{ts}Status{/ts}:</span>
-                  <span class="detail-value">
-                    {if $card.is_active}
-                      <span class="status-active">{$card.membership_status_label}</span>
-                    {elseif $card.is_expired}
-                      <span class="status-expired">{$card.membership_status_label}</span>
-                    {else}
-                      <span class="status-other">{$card.membership_status_label}</span>
-                    {/if}
-                  </span>
-                </div>
-                {if $card.end_date}
-                  <div class="detail-row">
-                    <span class="detail-label">{ts}Expires{/ts}:</span>
-                    <span class="detail-value">
-                      {$card.end_date|crmDate}
-                      {if $card.days_until_expiry !== null && $card.days_until_expiry > 0}
-                        <span class="expiry-info">({$card.days_until_expiry} {ts}days{/ts})</span>
-                      {/if}
-                    </span>
+            <!-- Member Information -->
+            <td class="member-info-cell">
+              <div class="member-summary">
+                {if $card.image_URL}
+                  <div class="member-photo-small">
+                    <img src="{$card.image_URL}" alt="{$card.display_name}" class="img-circle" width="32" height="32" />
                   </div>
                 {/if}
-                <div class="detail-row">
-                  <span class="detail-label">{ts}Generated{/ts}:</span>
-                  <span class="detail-value">{$card.card_created_date|crmDate}</span>
-                </div>
-              </div>
-
-              <!-- Card Actions -->
-              <div class="card-actions">
-                <div class="primary-actions">
-                  <a href="{$card.download_url}" class="btn btn-sm btn-primary" title="{ts}Download Card{/ts}">
-                    <i class="fa fa-download"></i> {ts}Download{/ts}
-                  </a>
-                  <a href="{$card.verify_url}" class="btn btn-sm btn-info" title="{ts}Verify Card{/ts}" target="_blank">
-                    <i class="fa fa-qrcode"></i> {ts}Verify{/ts}
-                  </a>
-                </div>
-
-                <div class="secondary-actions">
-                  <div class="btn-group">
-                    <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-toggle="dropdown" title="{ts}More Actions{/ts}">
-                      <i class="fa fa-ellipsis-h"></i>
-                      <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-right">
-                      <li>
-                        <a href="#" onclick="previewCard({$card.card_id})">
-                          <i class="fa fa-eye"></i> {ts}Preview{/ts}
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#" onclick="emailCard({$card.card_id})">
-                          <i class="fa fa-envelope"></i> {ts}Email Card{/ts}
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#" onclick="regenerateCard({$card.card_id})">
-                          <i class="fa fa-refresh"></i> {ts}Regenerate{/ts}
-                        </a>
-                      </li>
-                      <li role="separator" class="divider"></li>
-                      <li>
-                        <a href="{$card.contact_url}">
-                          <i class="fa fa-user"></i> {ts}View Contact{/ts}
-                        </a>
-                      </li>
-                      <li>
-                        <a href="{$card.membership_url}">
-                          <i class="fa fa-id-badge"></i> {ts}View Membership{/ts}
-                        </a>
-                      </li>
-                      <li role="separator" class="divider"></li>
-                      <li>
-                        <a href="#" onclick="deleteCard({$card.card_id}, '{$card.display_name|escape:'javascript'}')" class="text-danger">
-                          <i class="fa fa-trash"></i> {ts}Delete Card{/ts}
-                        </a>
-                      </li>
-                    </ul>
+                <div class="member-details">
+                  <div class="member-name">
+                    <a href="{$card.contact_url}" title="{ts}View Contact{/ts}">
+                      {$card.display_name}
+                    </a>
                   </div>
+                  <div class="member-id text-muted">ID: {$card.membership_id}</div>
                 </div>
               </div>
-            </div>
-          </div>
+            </td>
+
+            <!-- Membership Type -->
+            <td class="membership-type-cell">
+              {$card.membership_type_name}
+            </td>
+
+            <!-- Status -->
+            <td class="status-cell">
+              {if $card.is_active}
+                <span class="badge badge-success">{$card.membership_status_label}</span>
+              {elseif $card.is_expired}
+                <span class="badge badge-danger">{$card.membership_status_label}</span>
+              {else}
+                <span class="badge badge-warning">{$card.membership_status_label}</span>
+              {/if}
+            </td>
+
+            <!-- Expiry Date -->
+            <td class="expiry-cell">
+              {if $card.end_date}
+                <div class="expiry-date">{$card.end_date|crmDate}</div>
+                {if $card.days_until_expiry !== null && $card.days_until_expiry > 0}
+                  <div class="expiry-info text-muted small">({$card.days_until_expiry} {ts}days{/ts})</div>
+                {/if}
+              {else}
+                <span class="text-muted">{ts}No expiry{/ts}</span>
+              {/if}
+            </td>
+
+            <!-- Template -->
+            <td class="template-cell">
+              <span class="template-name" title="{$card.template_name}">
+                <i class="fa fa-file-text-o"></i> {$card.template_name}
+              </span>
+            </td>
+
+            <!-- Generated Date -->
+            <td class="generated-cell">
+              {$card.card_created_date|crmDate}
+            </td>
+
+            <!-- Actions -->
+            <td class="actions-cell text-center">
+              <div class="btn-group btn-group-sm">
+                <!-- Primary Actions -->
+                <a href="{$card.download_url}" class="btn btn-primary btn-xs" title="{ts}Download Card{/ts}">
+                  <i class="fa fa-download"></i>
+                </a>
+                <a href="{$card.verify_url}" class="btn btn-info btn-xs" title="{ts}Verify Card{/ts}" target="_blank">
+                  <i class="fa fa-qrcode"></i>
+                </a>
+
+                <!-- More Actions Dropdown -->
+                <div class="secondary-actions">
+                <div class="btn-group">
+                  <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" title="{ts}More Actions{/ts}">
+                    <i class="fa fa-ellipsis-h"></i>
+                    <span class="caret"></span>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-right" style="background-color: var(--crm-c-background);">
+                    <li>
+                      <a href="#" onclick="previewCard({$card.card_id})">
+                        <i class="fa fa-eye"></i> {ts}Preview{/ts}
+                      </a>
+                    </li>
+                    <li>
+                      <a href="#" onclick="emailCard({$card.card_id})">
+                        <i class="fa fa-envelope"></i> {ts}Email Card{/ts}
+                      </a>
+                    </li>
+                    <li>
+                      <a href="#" onclick="regenerateCard({$card.card_id})">
+                        <i class="fa fa-refresh"></i> {ts}Regenerate{/ts}
+                      </a>
+                    </li>
+                    <li role="separator" class="divider"></li>
+                    <li>
+                      <a href="{$card.contact_url}">
+                        <i class="fa fa-user"></i> {ts}View Contact{/ts}
+                      </a>
+                    </li>
+                    <li>
+                      <a href="{$card.membership_url}">
+                        <i class="fa fa-id-badge"></i> {ts}View Membership{/ts}
+                      </a>
+                    </li>
+                    <li role="separator" class="divider"></li>
+                    <li>
+                      <a href="#" onclick="deleteCard({$card.card_id}, '{$card.display_name|escape:'javascript'}')" class="text-danger">
+                        <i class="fa fa-trash"></i> {ts}Delete Card{/ts}
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+                </div>
+              </div>
+            </td>
+          </tr>
         {/foreach}
-      </div>
+        </tbody>
+      </table>
     </div>
 
     <!-- Pagination -->
@@ -319,7 +313,6 @@
                 </a>
               </li>
             {/if}
-
 
             {assign var="start_page" value=`$pagination.current_page-2`}
             {assign var="end_page" value=`$pagination.current_page+2`}
@@ -391,7 +384,7 @@
 {* Modals *}
 
 {* Card Preview Modal *}
-<div class="modal fade" id="card-preview-modal" tabindex="-1" role="dialog">
+<div class="modal fade" id="card-preview-modal" tabindex="-1" role="dialog" style="display: none;">
   <div class="modal-dialog modal-lg" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -484,513 +477,6 @@
     </div>
   </div>
 </div>
-
-{* CSS Styles *}
-{literal}
-  <style>
-    .page-header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 25px 30px;
-      border-radius: 8px;
-      margin-bottom: 25px;
-    }
-
-    .page-header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 15px;
-    }
-
-    .page-title {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .page-subtitle {
-      font-size: 18px;
-      font-weight: 400;
-      opacity: 0.9;
-    }
-
-    .page-actions .btn-group {
-      display: flex;
-      gap: 10px;
-    }
-
-    /* Statistics Cards */
-    .stats-section {
-      margin-bottom: 30px;
-    }
-
-    .col-md-2 {
-      width: 15%;
-    }
-
-    .stat-card {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      border-left: 4px solid #ddd;
-      transition: transform 0.2s, box-shadow 0.2s;
-      height: 100px;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    .stat-total { border-left-color: #6c757d; }
-    .stat-active { border-left-color: #28a745; }
-    .stat-expired { border-left-color: #dc3545; }
-    .stat-expiring { border-left-color: #ffc107; }
-    .stat-recent { border-left-color: #17a2b8; }
-    .stat-info { border-left-color: #6f42c1; }
-
-    .stat-icon {
-      font-size: 24px;
-      color: #6c757d;
-    }
-
-    .stat-content {
-      flex: 1;
-    }
-
-    .stat-number {
-      font-size: 28px;
-      font-weight: 700;
-      line-height: 1;
-      margin-bottom: 5px;
-    }
-
-    .stat-label {
-      font-size: 13px;
-      color: #6c757d;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 500;
-    }
-
-    .stat-text {
-      font-size: 12px;
-      color: #495057;
-      font-weight: 500;
-    }
-
-    /* Filters */
-    .filters-section {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      margin-bottom: 25px;
-    }
-
-    .filters-form .form-group label {
-      font-weight: 600;
-      color: #495057;
-      margin-bottom: 5px;
-    }
-
-    .filter-actions {
-      display: flex;
-      gap: 10px;
-      padding-top: 6px;
-    }
-
-    /* Cards Grid */
-    .cards-grid-section {
-      margin-bottom: 30px;
-    }
-
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 20px;
-    }
-
-    .membership-card-item {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      overflow: hidden;
-      transition: transform 0.2s, box-shadow 0.2s;
-      border: 1px solid #e9ecef;
-    }
-
-    .membership-card-item:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-
-    .card-expired {
-      opacity: 0.8;
-      border-color: #dc3545;
-    }
-
-    .card-expiring {
-      border-color: #ffc107;
-    }
-
-    /* Card Preview */
-    .card-preview {
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card-visual {
-      width: 100%;
-      min-height: 120px;
-      position: relative;
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      border: 1px solid #dee2e6;
-    }
-
-    .card-overlay {
-      position: absolute;
-      inset: 0;
-      padding: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-
-    .card-member-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .member-photo {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      overflow: hidden;
-      background: #f8f9fa;
-      border: 2px solid white;
-    }
-
-    .member-photo img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .member-details {
-      color: #333;
-    }
-
-    .member-name {
-      font-weight: 600;
-      font-size: 14px;
-      line-height: 1.2;
-    }
-
-    .member-type {
-      font-size: 12px;
-      color: #666;
-      margin: 2px 0;
-    }
-
-    .member-id {
-      font-size: 11px;
-      color: #888;
-      font-family: monospace;
-    }
-
-    .card-status-badge {
-      align-self: flex-start;
-    }
-
-    .badge {
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .badge-success {
-      background-color: #d4edda;
-      color: #155724;
-    }
-
-    .badge-danger {
-      background-color: #f8d7da;
-      color: #721c24;
-    }
-
-    .badge-warning {
-      background-color: #fff3cd;
-      color: #856404;
-    }
-
-    /* Card Information */
-    .card-info {
-      padding: 20px;
-    }
-
-    .card-header {
-      margin-bottom: 15px;
-    }
-
-    .card-member-name {
-      margin: 0 0 5px 0;
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .card-member-name a {
-      color: #495057;
-      text-decoration: none;
-    }
-
-    .card-member-name a:hover {
-      color: #007bff;
-    }
-
-    .card-metadata {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      font-size: 12px;
-      color: #6c757d;
-    }
-
-    .card-template i {
-      margin-right: 4px;
-    }
-
-    .card-details {
-      margin-bottom: 20px;
-    }
-
-    .detail-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 0;
-      border-bottom: 1px solid #f8f9fa;
-    }
-
-    .detail-label {
-      font-weight: 500;
-      color: #6c757d;
-      font-size: 13px;
-    }
-
-    .detail-value {
-      font-size: 13px;
-      color: #495057;
-      text-align: right;
-    }
-
-    .status-active {
-      color: #28a745;
-      font-weight: 600;
-    }
-
-    .status-expired {
-      color: #dc3545;
-      font-weight: 600;
-    }
-
-    .status-other {
-      color: #ffc107;
-      font-weight: 600;
-    }
-
-    .expiry-info {
-      color: #6c757d;
-      font-size: 11px;
-    }
-
-    /* Card Actions */
-    .card-actions {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-top: 15px;
-      border-top: 1px solid #f8f9fa;
-    }
-
-    .primary-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .secondary-actions .dropdown-menu {
-      right: 0;
-      left: auto;
-    }
-
-    /* Pagination */
-    .pagination-section {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .pagination-info {
-      color: #6c757d;
-      font-size: 14px;
-    }
-
-    .pagination {
-      margin: 0;
-      display: flex;
-      list-style: none;
-      gap: 5px;
-    }
-
-    .pagination li a {
-      padding: 8px 12px;
-      border: 1px solid #dee2e6;
-      border-radius: 4px;
-      color: #495057;
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-
-    .pagination li a:hover {
-      background-color: #e9ecef;
-      border-color: #adb5bd;
-    }
-
-    .pagination li.active a {
-      background-color: #007bff;
-      border-color: #007bff;
-      color: white;
-    }
-
-    /* Empty State */
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .empty-state-icon {
-      color: #dee2e6;
-      margin-bottom: 20px;
-    }
-
-    .empty-state h3 {
-      color: #495057;
-      margin-bottom: 10px;
-    }
-
-    .empty-state-message {
-      color: #6c757d;
-      margin-bottom: 25px;
-      font-size: 16px;
-    }
-
-    .empty-state-actions {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 992px) {
-      .cards-grid {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      }
-
-      .page-header-content {
-        flex-direction: column;
-        text-align: center;
-      }
-
-      .stats-section .row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-      }
-
-      .stats-section [class*="col-"] {
-        flex: 1;
-        min-width: 150px;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .cards-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .pagination-section {
-        flex-direction: column;
-        gap: 15px;
-        text-align: center;
-      }
-
-      .card-actions {
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .primary-actions {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .stat-card {
-        flex-direction: column;
-        text-align: center;
-        height: auto;
-        padding: 15px;
-      }
-
-      .stat-icon {
-        font-size: 20px;
-      }
-
-      .stat-number {
-        font-size: 24px;
-      }
-    }
-
-    /* Loading States */
-    .loading-spinner {
-      padding: 40px;
-      text-align: center;
-      color: #6c757d;
-    }
-
-    .loading-spinner i {
-      margin-bottom: 10px;
-    }
-
-    /* Modal Customizations */
-    .modal-body img {
-      max-width: 100%;
-      height: auto;
-      border: 1px solid #dee2e6;
-      border-radius: 4px;
-    }
-  </style>
-{/literal}
 
 {* JavaScript Functions *}
 {literal}

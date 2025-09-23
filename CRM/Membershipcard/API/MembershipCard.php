@@ -6,11 +6,17 @@
  */
 class CRM_Membershipcard_API_MembershipCard {
 
+  public static function generateCard() {
+    $membership_id = CRM_Utils_Request::retrieve('membership_id', 'Positive', NULL, FALSE, NULL, 'REQUEST');
+    self::generate(['membership_id' => $membership_id]);
+    echo json_encode(['status' => 'success']);
+    exit;
+  }
   /**
    * Generate a membership card
    */
   public static function generate($params) {
-    $required = ['membership_id', 'template_id'];
+    $required = ['membership_id'];
     foreach ($required as $field) {
       if (empty($params[$field])) {
         throw new API_Exception("Missing required field: $field");
@@ -22,14 +28,18 @@ class CRM_Membershipcard_API_MembershipCard {
       'id' => $params['membership_id'],
     ]);
 
-    // Get contact data
-    $contact = civicrm_api3('Contact', 'getsingle', [
-      'id' => $membership['contact_id'],
-    ]);
-
     // Get membership type
     $membershipType = civicrm_api3('MembershipType', 'getsingle', [
       'id' => $membership['membership_type_id'],
+    ]);
+
+    if (empty($membershipType['template_id'])) {
+      throw new API_Exception("Missing template_id on membership type");
+    }
+
+    // Get contact data
+    $contact = civicrm_api3('Contact', 'getsingle', [
+      'id' => $membership['contact_id'],
     ]);
 
     // Get template
@@ -53,6 +63,10 @@ class CRM_Membershipcard_API_MembershipCard {
     $card = new CRM_Membershipcard_DAO_MembershipCard();
     $card->membership_id = $params['membership_id'];
     $card->template_id = $params['template_id'];
+    if ($card->find(TRUE)) {
+      // Update existing card
+      $card->modified_date = date('Y-m-d H:i:s');
+    }
     $card->front_card_data = json_encode($cardDataFront);
     $card->back_card_data = json_encode($cardDataBack);
     $card->qr_code = json_encode($qrData);
@@ -482,12 +496,39 @@ class CRM_Membershipcard_API_MembershipCard {
   }
 
   public static function downloadBothSides($params) {
-    $frontResult = self::download(['card_id' => $params['card_id'], 'side' => 'front']);
-    $backResult = self::download(['card_id' => $params['card_id'], 'side' => 'back']);
-
+    if (empty($params['card_id'])) {
+      throw new API_Exception("Missing required field: card_id");
+    }
     $format = CRM_Utils_Array::value('format', $params, 'separate');
+    // get template info
+    $templateID = CRM_Core_DAO::getFieldValue('CRM_Membershipcard_DAO_MembershipCard', $params['card_id'], 'template_id', 'id');
+    // get template is is_dual_sided or not.
+    $isDualSided = CRM_Core_DAO::getFieldValue('CRM_Membershipcard_DAO_MembershipCardTemplate', $templateID, 'is_dual_sided', 'id');
+
+    if ($isDualSided) {
+      $frontResult = self::download(['card_id' => $params['card_id'], 'side' => 'front']);
+      $backResult = self::download(['card_id' => $params['card_id'], 'side' => 'back']);
+      $format = 'combined';
+    }
+    else {
+      // if template is not dual sided, return only front side image.
+      $frontResult = self::download(['card_id' => $params['card_id'], 'side' => 'front']);
+      return [
+        'image_data' => $frontResult['image_data'],
+        'filename' => "membership-card-front-side.png",
+        'mime_type' => 'image/png',
+        'sides' => 'front'
+      ];
+    }
 
     switch ($format) {
+      case 'single':
+        return [
+          'image_data' => $frontResult['image_data'],
+          'filename' => "membership-card-both-sides.png",
+          'mime_type' => 'image/png',
+          'sides' => 'both'
+        ];
       case 'combined':
         $combinedImage = self::combineCardSides($frontResult['image_data'], $backResult['image_data']);
         return [
@@ -524,7 +565,7 @@ class CRM_Membershipcard_API_MembershipCard {
    * @param array $options Optional configuration for layout
    * @return string Base64 encoded combined image data
    */
-  private static function combineCardSides($frontImageData, $backImageData, $options = []) {
+  private static function combineCardSides($frontImageData, $backImageData = '', $options = []) {
     // Default options
     $defaultOptions = [
       'layout' => 'horizontal', // 'horizontal', 'vertical'

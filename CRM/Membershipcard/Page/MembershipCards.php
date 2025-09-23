@@ -12,12 +12,20 @@ class CRM_Membershipcard_Page_MembershipCards extends CRM_Core_Page {
 
   public function run() {
     CRM_Utils_System::setTitle(ts('Membership Cards'));
-
+    $params = [
+      'membership_id' => 62,
+    ];
+    $result = CRM_Membershipcard_API_MembershipCard::generate($params);
+    echo '<pre>'; print_r($result);
+    exit;
     $this->_action = CRM_Utils_Request::retrieve('action', 'String', $this, FALSE, 'browse');
     $this->_id = CRM_Utils_Request::retrieve('id', 'Positive', $this);
 
     // Add resources
+    /*
     CRM_Core_Resources::singleton()->addScriptFile('com.skvare.membershipcard', 'js/membership-cards.js');
+    */
+    CRM_Core_Resources::singleton()->addScriptFile('com.skvare.membershipcard', 'js/membershipcard.js');
     CRM_Core_Resources::singleton()->addStyleFile('com.skvare.membershipcard', 'css/membership-cards.css');
 
     if ($this->_action & CRM_Core_Action::DELETE) {
@@ -134,7 +142,7 @@ class CRM_Membershipcard_Page_MembershipCards extends CRM_Core_Page {
     ";
 
     $dao = CRM_Core_DAO::executeQuery($sql, $sqlParams);
-
+    //echo '<pre>'; print_r($dao);exit;
     $cards = [];
     while ($dao->fetch()) {
       $isExpired = (!empty($dao->end_date) && strtotime($dao->end_date) < time());

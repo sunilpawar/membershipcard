@@ -15,7 +15,7 @@ class CRM_Membershipcard_Page_Download extends CRM_Core_Page {
     }
 
     try {
-      $result = CRM_Membershipcard_API_MembershipCard::download(['card_id' => $cardId]);
+      $result = CRM_Membershipcard_API_MembershipCard::downloadBothSides(['card_id' => $cardId]);
 
       // Set headers for file download
       header('Content-Type: ' . $result['mime_type']);
