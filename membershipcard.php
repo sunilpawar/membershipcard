@@ -197,13 +197,11 @@ function membershipcard_civicrm_links($op, $objectName, $objectId, &$links, &$ma
     $links[] = [
       'name' => ts('Generate Card'),
       'title' => ts('Generate Membership Card'),
-      'url' => CRM_Utils_System::url('civicrm/membership/generate-card', [
-        'membership_id' => $objectId,
-        'reset' => 1,
-      ]),
-      'class' => 'action-item no-popup',
+      'url' => '#', // Use # since we'll handle with JavaScript
+      'class' => 'action-item no-popup crm-membership-generate-card-ajax',
       'icon' => 'fa-id-card',
-      'weight' => 100, // Controls ordering
+      'weight' => 100,
+      'extra' => "data-membership-id={$objectId}",
     ];
 
     // Add "View Cards" link if cards exist
@@ -227,7 +225,7 @@ function membershipcard_civicrm_links($op, $objectName, $objectId, &$links, &$ma
     }
 
     // Add "Email Card" link for active memberships
-    if (!empty($values['status']) && $values['status'] == 'Current') {
+    if (FALSE && !empty($values['status']) && $values['status'] == 'Current') {
       $links[] = [
         'name' => ts('Email Card'),
         'title' => ts('Email Membership Card'),
@@ -241,8 +239,7 @@ function membershipcard_civicrm_links($op, $objectName, $objectId, &$links, &$ma
   }
 
   // For membership selector/search results
-  if ($op == 'membership.selector.row') {
-
+  if (FALSE && $op == 'membership.selector.row') {
     $links[] = [
       'name' => ts('Cards'),
       'title' => ts('Manage Membership Cards'),

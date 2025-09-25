@@ -6,12 +6,21 @@
  */
 class CRM_Membershipcard_API_MembershipCard {
 
+  /**
+   * AJAX entry point to generate a membership card
+   */
   public static function generateCard() {
-    $membership_id = CRM_Utils_Request::retrieve('membership_id', 'Positive', NULL, FALSE, NULL, 'REQUEST');
-    self::generate(['membership_id' => $membership_id]);
-    //echo json_encode(['status' => 'success']);
+    try {
+      $membership_id = CRM_Utils_Request::retrieve('membership_id', 'Positive', NULL, FALSE, NULL, 'REQUEST');
+      $result = self::generate(['membership_id' => $membership_id]);
+      echo json_encode(['success' => TRUE]);
+    }
+    catch (Exception $e) {
+      echo json_encode(['success' => FALSE, 'error' => $e->getMessage()]);
+    }
     exit;
   }
+
   /**
    * Generate a membership card
    */
