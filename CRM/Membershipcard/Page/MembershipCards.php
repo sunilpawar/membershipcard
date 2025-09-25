@@ -12,12 +12,6 @@ class CRM_Membershipcard_Page_MembershipCards extends CRM_Core_Page {
 
   public function run() {
     CRM_Utils_System::setTitle(ts('Membership Cards'));
-    $params = [
-      'membership_id' => 62,
-    ];
-    $result = CRM_Membershipcard_API_MembershipCard::generate($params);
-    echo '<pre>'; print_r($result);
-    exit;
     $this->_action = CRM_Utils_Request::retrieve('action', 'String', $this, FALSE, 'browse');
     $this->_id = CRM_Utils_Request::retrieve('id', 'Positive', $this);
 

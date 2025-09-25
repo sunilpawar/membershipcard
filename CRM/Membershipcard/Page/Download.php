@@ -9,14 +9,12 @@ class CRM_Membershipcard_Page_Download extends CRM_Core_Page {
 
   public function run() {
     $cardId = CRM_Utils_Request::retrieve('card_id', 'Positive', $this);
-
     if (!$cardId) {
       CRM_Core_Error::fatal('Card ID is required');
     }
 
     try {
-      $result = CRM_Membershipcard_API_MembershipCard::downloadBothSides(['card_id' => $cardId]);
-
+      $result = CRM_Membershipcard_API_MembershipCard::downloadBothSides(['card_id' => $cardId, 'format' => 'combined']);
       // Set headers for file download
       header('Content-Type: ' . $result['mime_type']);
       header('Content-Disposition: attachment; filename="' . $result['filename'] . '"');

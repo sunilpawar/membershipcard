@@ -9,7 +9,7 @@ class CRM_Membershipcard_API_MembershipCard {
   public static function generateCard() {
     $membership_id = CRM_Utils_Request::retrieve('membership_id', 'Positive', NULL, FALSE, NULL, 'REQUEST');
     self::generate(['membership_id' => $membership_id]);
-    echo json_encode(['status' => 'success']);
+    //echo json_encode(['status' => 'success']);
     exit;
   }
   /**
@@ -504,7 +504,6 @@ class CRM_Membershipcard_API_MembershipCard {
     $templateID = CRM_Core_DAO::getFieldValue('CRM_Membershipcard_DAO_MembershipCard', $params['card_id'], 'template_id', 'id');
     // get template is is_dual_sided or not.
     $isDualSided = CRM_Core_DAO::getFieldValue('CRM_Membershipcard_DAO_MembershipCardTemplate', $templateID, 'is_dual_sided', 'id');
-
     if ($isDualSided) {
       $frontResult = self::download(['card_id' => $params['card_id'], 'side' => 'front']);
       $backResult = self::download(['card_id' => $params['card_id'], 'side' => 'back']);

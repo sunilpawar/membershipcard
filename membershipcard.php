@@ -201,7 +201,7 @@ function membershipcard_civicrm_links($op, $objectName, $objectId, &$links, &$ma
         'membership_id' => $objectId,
         'reset' => 1,
       ]),
-      'class' => 'action-item',
+      'class' => 'action-item no-popup',
       'icon' => 'fa-id-card',
       'weight' => 100, // Controls ordering
     ];
@@ -220,7 +220,7 @@ function membershipcard_civicrm_links($op, $objectName, $objectId, &$links, &$ma
           'card_id' => $cardID,
           'reset' => 1,
         ]),
-        'class' => 'action-item',
+        'class' => 'action-item no-popup',
         'icon' => 'fa-eye',
         'weight' => 101,
       ];

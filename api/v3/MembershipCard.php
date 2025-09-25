@@ -12,73 +12,12 @@
  * @throws API_Exception
  */
 function civicrm_api3_membership_card_generate($params) {
-  $required = ['membership_id', 'template_id'];
-  foreach ($required as $field) {
-    if (empty($params[$field])) {
-      throw new API_Exception("Missing required field: $field");
-    }
-  }
-
   try {
-    // Get membership data
-    $membership = civicrm_api3('Membership', 'getsingle', [
-      'id' => $params['membership_id'],
-    ]);
-
-    // Get contact data
-    $contact = civicrm_api3('Contact', 'getsingle', [
-      'id' => $membership['contact_id'],
-    ]);
-
-    // Get membership type
-    $membershipType = civicrm_api3('MembershipType', 'getsingle', [
-      'id' => $membership['membership_type_id'],
-    ]);
-
-    // Get template
-    $template = civicrm_api3('MembershipCardTemplate', 'getsingle', [
-      'id' => $params['template_id'],
-    ]);
-
-    // Generate card data
-    // $cardData = _membership_card_process_template($template, $contact,$membership, $membershipType);
-    $cardDataFront = CRM_Membershipcard_API_MembershipCard::processTemplate($template, $contact, $membership, $membershipType, TRUE);
-    $cardDataBack = CRM_Membershipcard_API_MembershipCard::processTemplate($template, $contact, $membership, $membershipType, FALSE);
-
-
-    // Generate QR code and barcode data
-    $qrData = CRM_Membershipcard_API_MembershipCard::generateQRCode($membership);
-    $barcodeData = CRM_Membershipcard_API_MembershipCard::generateBarcode($membership);
-    // Save card record
-    $cardParams = [
-      'membership_id' => $params['membership_id'],
-      'template_id' => $params['template_id'],
-      'front_card_data' => json_encode($cardDataFront),
-      'back_card_data' => json_encode($cardDataBack),
-      'qr_code' => json_encode($qrData),
-      'barcode' => json_encode($barcodeData),
-      'created_date' => date('Y-m-d H:i:s'),
-    ];
-
-    // Check if card already exists
-    $existingCard = CRM_Core_DAO::executeQuery("
-      SELECT id FROM civicrm_membership_card
-      WHERE membership_id = %1 AND template_id = %2
-    ", [
-      1 => [$params['membership_id'], 'Integer'],
-      2 => [$params['template_id'], 'Integer'],
-    ]);
-
-    if ($existingCard->fetch()) {
-      $cardParams['id'] = $existingCard->id;
-      $cardParams['modified_date'] = date('Y-m-d H:i:s');
-    }
-
-    $cardResult = civicrm_api3('MembershipCard', 'create', $cardParams);
+    $result = CRM_Membershipcard_API_MembershipCard::generate($params);
     $cardId = $cardResult['id'];
 
     return civicrm_api3_create_success([
-      'card_id' => $cardId,
+      'card_id' => $result->id,
       'front_card_data' => $cardDataFront,
       'back_card_data' => $cardDataBack,
       'qr_code' => $qrData,
@@ -304,34 +243,8 @@ function civicrm_api3_membership_card_download($params) {
   }
 
   try {
-    $sql = "
-      SELECT mc.*, m.contact_id, m.membership_type_id
-      FROM civicrm_membership_card mc
-      INNER JOIN civicrm_membership m ON mc.membership_id = m.id
-      WHERE mc.id = %1
-    ";
-
-    $dao = CRM_Core_DAO::executeQuery($sql, [
-      1 => [$params['card_id'], 'Integer']
-    ]);
-
-    if (!$dao->fetch()) {
-      throw new API_Exception("Card not found");
-    }
-
-    $cardData = json_decode($dao->card_data, TRUE);
-
-    // Generate card image
-    $imageData = _membership_card_generate_image($cardData, $params);
-
-    $result = [
-      'card_id' => $dao->id,
-      'membership_id' => $dao->membership_id,
-      'image_data' => $imageData,
-      'filename' => "membership-card-{$dao->membership_id}.png",
-      'mime_type' => 'image/png',
-      'card_data' => $cardData,
-    ];
+    // Generate card
+    $result = CRM_Membershipcard_API_MembershipCard::downloadBothSides(['card_id' => $params['card_id']]);
 
     return civicrm_api3_create_success([$result], $params, 'MembershipCard', 'download');
 
@@ -422,25 +335,6 @@ function _membership_card_process_template($template, $contact, $membership, $me
   ];
 }
 
-/**
- * Generate card image
- */
-function _membership_card_generate_image($cardData, $params = []) {
-  // This would use a server-side image generation library
-  // For now, return a base64 placeholder
-  // In production, you'd use libraries like:
-  // - ImageMagick
-  // - GD
-  // - wkhtmltopdf for PDF generation
-  // - Canvas rendering with headless Chrome
-
-  $format = CRM_Utils_Array::value('format', $params, 'png');
-
-  // Placeholder image data
-  $placeholder = 'iVBORw0KGgoAAAANSUhEUgAAAV4AAADcCAYAAAAhkMnDAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGPSURBVHhe7cExAQAAAMKg9U9tCj8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAH+AABsGh8vAAAAAElFTkSuQmCC';
-
-  return "data:image/{$format};base64,{$placeholder}";
-}
 
 /**
  * Log verification attempt
