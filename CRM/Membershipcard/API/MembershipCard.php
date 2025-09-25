@@ -45,12 +45,13 @@ class CRM_Membershipcard_API_MembershipCard {
     if (empty($membershipType['template_id'])) {
       throw new API_Exception("Missing template_id on membership type");
     }
+    $params['template_id'] = $membershipType['template_id'];
+
 
     // Get contact data
     $contact = civicrm_api3('Contact', 'getsingle', [
       'id' => $membership['contact_id'],
     ]);
-
     // Get template
     $template = CRM_Membershipcard_API_MembershipCardTemplate::get([
       'id' => $params['template_id']
@@ -1066,19 +1067,20 @@ class CRM_Membershipcard_API_MembershipCard {
     $explicitLines = explode("\n", $text);
     $allLines = [];
 
-    // Process each explicit line - only wrap if it exceeds maxWidth
+    // Process each explicit line - wrap if it exceeds maxWidth
     foreach ($explicitLines as $line) {
       $lineWidth = self::getTextWidth($line, $font);
 
       if ($lineWidth > $maxWidth && $maxWidth > 0) {
         // Line is too wide, wrap it
-        $wrappedLines[] = $line;//self::wrapText($line, $maxWidth, $font);
+        $wrappedLines = self::wrapText($line, $maxWidth, $font);
         $allLines = array_merge($allLines, $wrappedLines);
       } else {
         // Line fits, keep it as is
         $allLines[] = $line;
       }
     }
+
     // Calculate total text height
     $totalTextHeight = count($allLines) * $pixelLineHeight;
 
@@ -1094,7 +1096,6 @@ class CRM_Membershipcard_API_MembershipCard {
         }
       }
     }
-    // echo '<pre>$allLines-'; print_r($allLines); echo '</pre>';
 
     // Calculate starting Y position
     $startY = $top;
@@ -1110,11 +1111,17 @@ class CRM_Membershipcard_API_MembershipCard {
       imagestring($image, $font, $x, $y, $line, $textColor);
     }
   }
+
   /**
    * Wrap text to fit within specified width (only called when needed)
    */
   private static function wrapText($text, $maxWidth, $font) {
     if (empty($text) || $maxWidth <= 0) {
+      return [$text];
+    }
+
+    // If the entire text fits, return it as a single line
+    if (self::getTextWidth($text, $font) <= $maxWidth) {
       return [$text];
     }
 
@@ -1136,14 +1143,12 @@ class CRM_Membershipcard_API_MembershipCard {
 
           // Check if single word is still too long
           if (self::getTextWidth($word, $font) > $maxWidth) {
-            $currentLine = self::truncateLineWithEllipsis($word, $maxWidth, $font);
-            $lines[] = $currentLine;
+            $lines[] = self::truncateLineWithEllipsis($word, $maxWidth, $font);
             $currentLine = '';
           }
         } else {
           // Single word is too long, truncate it
-          $currentLine = self::truncateLineWithEllipsis($word, $maxWidth, $font);
-          $lines[] = $currentLine;
+          $lines[] = self::truncateLineWithEllipsis($word, $maxWidth, $font);
           $currentLine = '';
         }
       }
@@ -1180,6 +1185,14 @@ class CRM_Membershipcard_API_MembershipCard {
       3 => 7,   // Medium
       4 => 8,   // Large
       5 => 10   // Very large
+    ];
+
+    $charWidths = [
+      1 => 3,   // Very small
+      2 => 4,   // Small
+      3 => 5,   // Medium
+      4 => 6,   // Large
+      5 => 9   // Very large
     ];
 
     $charWidth = $charWidths[$font] ?? 7;
