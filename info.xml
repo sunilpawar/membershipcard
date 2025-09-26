@@ -2,14 +2,11 @@
 <extension key="com.skvare.membershipcard" type="module">
   <file>membershipcard</file>
   <name>Membership Card Designer</name>
-  <description>FIXME</description>
-  <description>
-    Advanced membership card designer with drag-and-drop functionality, token support, and photo integration. Create professional membership cards with customizable templates.
-  </description>
+  <description>Advanced membership card designer with drag-and-drop functionality, token support, and photo integration. Create professional membership cards with customizable templates.</description>
   <license>AGPL-3.0</license>
   <maintainer>
-    <author>FIXME</author>
-    <email>FIXME</email>
+    <author>Sunil Pawar</author>
+    <email>sunil@skvare.com</email>
   </maintainer>
   <urls>
     <url desc="Main Extension Page">http://FIXME</url>
