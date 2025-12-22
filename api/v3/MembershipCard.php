@@ -364,3 +364,53 @@ function _membership_card_log_verification($membershipId, $isValid, $params, $er
     CRM_Core_Error::debug_log_message('Failed to log verification: ' . $e->getMessage());
   }
 }
+
+/**
+ * MembershipCard.Email API
+ *
+ * @param array $params
+ * @return array API result descriptor
+ * @throws API_Exception
+ */
+function civicrm_api3_membership_card_email($params) {
+  try {
+    $result = CRM_Membershipcard_API_MembershipCard::email($params);
+    return civicrm_api3_create_success($result, $params, 'MembershipCard', 'email');
+  }
+  catch (Exception $e) {
+    throw new API_Exception('Error emailing membership card: ' . $e->getMessage());
+  }
+}
+
+/**
+ * MembershipCard.Email API specification
+ */
+function _civicrm_api3_membership_card_email_spec(&$spec) {
+  $spec['card_id']['api.required'] = 1;
+  $spec['card_id']['title'] = 'Card ID';
+  $spec['card_id']['description'] = 'The membership card to email';
+  $spec['card_id']['type'] = CRM_Utils_Type::T_INT;
+
+  $spec['email_to']['api.required'] = 1;
+  $spec['email_to']['title'] = 'Email To';
+  $spec['email_to']['description'] = 'Email address to send the card to';
+  $spec['email_to']['type'] = CRM_Utils_Type::T_STRING;
+
+  $spec['email_subject']['title'] = 'Email Subject';
+  $spec['email_subject']['description'] = 'Subject line for the email';
+  $spec['email_subject']['type'] = CRM_Utils_Type::T_STRING;
+  $spec['email_subject']['api.default'] = 'Your Membership Card';
+
+  $spec['email_message']['title'] = 'Email Message';
+  $spec['email_message']['description'] = 'Message body for the email';
+  $spec['email_message']['type'] = CRM_Utils_Type::T_TEXT;
+
+  $spec['attach_pdf']['title'] = 'Attach PDF';
+  $spec['attach_pdf']['description'] = 'Whether to attach the card as PDF';
+  $spec['attach_pdf']['type'] = CRM_Utils_Type::T_BOOLEAN;
+  $spec['attach_pdf']['api.default'] = TRUE;
+
+  $spec['from_email']['title'] = 'From Email';
+  $spec['from_email']['description'] = 'From email address (uses default if not specified)';
+  $spec['from_email']['type'] = CRM_Utils_Type::T_STRING;
+}

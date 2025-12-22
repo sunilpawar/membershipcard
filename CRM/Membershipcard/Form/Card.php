@@ -5,14 +5,14 @@ use CRM_Membershipcard_ExtensionUtil as E;
 /**
  * Form for bulk generating membership cards
  */
-class CRM_Membershipcard_Form_BulkGenerate extends CRM_Core_Form {
-  protected $_templatesBulk;
+class CRM_Membershipcard_Form_Card extends CRM_Core_Form {
+  protected $_templates;
   protected $_membershipTypes;
 
   public function preProcess() {
     CRM_Utils_System::setTitle(ts('Bulk Generate Membership Cards'));
     // Load templates
-    $this->_templatesBulk = $this->getTemplates();
+    $this->_templates = $this->getTemplates();
 
     // Load membership types
     $this->_membershipTypes = CRM_Member_PseudoConstant::membershipType();
@@ -20,16 +20,11 @@ class CRM_Membershipcard_Form_BulkGenerate extends CRM_Core_Form {
     parent::preProcess();
   }
 
-  /**
-   * @throws \CRM_Core_Exception
-   */
-  public function buildQuickForm(): void {
-
-    // add form elements
+  public function buildQuickForm() {
 
     // Template selection
     $templateOptions = ['' => ts('- Select Template -')];
-    foreach ($this->_templatesBulk as $template) {
+    foreach ($this->_templates as $template) {
       $templateOptions[$template['id']] = $template['name'];
     }
 
@@ -58,8 +53,8 @@ class CRM_Membershipcard_Form_BulkGenerate extends CRM_Core_Form {
     ]);
 
     // Date range
-    $this->add('datepicker', 'start_date', ts('Start Date'), [], FALSE, ['time' => FALSE]);
-    $this->add('datepicker', 'end_date', ts('End Date'), [], FALSE, ['time' => FALSE]);
+    $this->add('datepicker', 'start_date', ts('Start Date From'), [], FALSE, ['time' => FALSE]);
+    $this->add('datepicker', 'end_date', ts('End Date From'), [], FALSE, ['time' => FALSE]);
 
     // Options
     $this->add('checkbox', 'regenerate_existing', ts('Regenerate Existing Cards'));
@@ -90,16 +85,18 @@ class CRM_Membershipcard_Form_BulkGenerate extends CRM_Core_Form {
       ],
     ]);
 
-    $this->assign('templates', $this->_templatesBulk);
+    $this->assign('templates', $this->_templates);
     $this->assign('membershipTypes', $this->_membershipTypes);
   }
 
   public function postProcess() {
     $values = $this->exportValues();
     $buttonName = $this->controller->getButtonName();
+
     try {
       // Get memberships based on criteria
       $memberships = $this->getMemberships($values);
+
       if (empty($memberships)) {
         CRM_Core_Session::setStatus(ts('No memberships found matching the criteria.'), ts('No Results'), 'warning');
         return;
@@ -140,13 +137,13 @@ class CRM_Membershipcard_Form_BulkGenerate extends CRM_Core_Form {
     if (!empty($values['membership_status'])) {
       switch ($values['membership_status']) {
         case 'current':
-          $whereClause .= " AND ms.name IN ('current', 'new', 'grace')";
+          $whereClause .= " AND ms.name IN ('Current', 'New', 'Grace')";
           break;
         case 'new':
-          $whereClause .= " AND ms.name = 'new'";
+          $whereClause .= " AND ms.name = 'New'";
           break;
         case 'grace':
-          $whereClause .= " AND ms.name = 'grace'";
+          $whereClause .= " AND ms.name = 'Grace'";
           break;
       }
     }
@@ -190,12 +187,11 @@ class CRM_Membershipcard_Form_BulkGenerate extends CRM_Core_Form {
         m.start_date,
         m.end_date,
         c.display_name,
-        e.email,
+        c.email,
         mt.name as membership_type_name,
         ms.name as membership_status
       FROM civicrm_membership m
       INNER JOIN civicrm_contact c ON m.contact_id = c.id
-      LEFT JOIN civicrm_email e ON e.contact_id = c.id and e.is_primary = 1
       INNER JOIN civicrm_membership_type mt ON m.membership_type_id = mt.id
       INNER JOIN civicrm_membership_status ms ON m.status_id = ms.id
       {$whereClause}
@@ -224,7 +220,7 @@ class CRM_Membershipcard_Form_BulkGenerate extends CRM_Core_Form {
   }
 
   protected function previewResults($memberships, $values) {
-    $template = $this->getTemplateForEmail($values['template_id']);
+    $template = $this->getTemplate($values['template_id']);
 
     $this->assign('preview', TRUE);
     $this->assign('memberships', $memberships);
@@ -322,7 +318,7 @@ class CRM_Membershipcard_Form_BulkGenerate extends CRM_Core_Form {
     }
   }
 
-  protected function getTemplateForEmail($templateId) {
+  protected function getTemplate($templateId) {
     try {
       return civicrm_api3('MembershipCardTemplate', 'getsingle', [
         'id' => $templateId,

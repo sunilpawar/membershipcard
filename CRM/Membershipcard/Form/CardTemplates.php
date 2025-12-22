@@ -59,7 +59,7 @@ class CRM_Membershipcard_Form_CardTemplates extends CRM_Core_Form {
     if ($this->_id && $this->_templateCard) {
       $this->setDefaultValues();
     }
-    $this->assign('template', $this->getTemplateForJS());
+    //$this->assign('template', $this->getTemplateForJS());
     $this->assign('tokens', membershipcard_get_tokens());
   }
 

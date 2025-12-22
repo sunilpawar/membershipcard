@@ -685,9 +685,9 @@
 /* Canvas Side Indicator */
 .canvas-side-indicator {
   position: absolute;
-  top: 10px;
+  top: 0px;
   right: 10px;
-  background: rgba(0, 123, 255, 0.9);
+  /* background: rgba(0, 123, 255, 0.9); */
   color: white;
   padding: 5px 12px;
   border-radius: 15px;
@@ -1023,8 +1023,8 @@
 
 .canvas-side-indicator {
   position: absolute;
-  top: 15px;
-  left: 15px;
+  top: 0px;
+  /* left: 15px; */
   color: #007bff;
   padding: 8px 12px;
   border-radius: 20px;

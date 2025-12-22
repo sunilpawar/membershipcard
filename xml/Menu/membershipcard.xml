@@ -34,7 +34,7 @@
   </item>
   <!-- Generate Card -->
   <item>
-    <path>civicrm/membership-card/bulk-generate</path>
+    <path>civicrm/membership-cards/bulk-generate</path>
     <title>Generate Membership Card</title>
     <desc>Generate a membership card</desc>
     <page_callback>CRM_Membershipcard_Form_BulkGenerate</page_callback>

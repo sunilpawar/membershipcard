@@ -63,25 +63,45 @@ class CRM_Membershipcard_API_MembershipCard {
 
     $template = $template['values'][0];
 
-    // Generate card data
+    // Check if card already exists and handle force_regenerate logic
+    $card = new CRM_Membershipcard_DAO_MembershipCard();
+    $card->membership_id = $params['membership_id'];
+    $card->template_id = $params['template_id'];
+
+    $cardExists = $card->find(TRUE);
+
+    // If card exists and force_regenerate is not set, return existing card
+    if ($cardExists && empty($params['force_regenerate'])) {
+      return [
+        'card_id' => $card->id,
+        'front_card_data' => json_decode($card->front_card_data, TRUE),
+        'back_card_data' => json_decode($card->back_card_data, TRUE),
+        'qr_code' => $card->qr_code,
+        'barcode' => $card->barcode,
+        'download_url' => CRM_Utils_System::url('civicrm/membership-card/download', "card_id={$card->id}", TRUE),
+        'verification_url' => json_decode($card->qr_code, TRUE)['verification_url'],
+      ];
+    }
+    // Generate new card data (either new card or forced regeneration)
     $cardDataFront = self::processTemplate($template, $contact, $membership, $membershipType, TRUE);
     $cardDataBack = self::processTemplate($template, $contact, $membership, $membershipType, FALSE);
     $qrData = self::generateQRCode($membership);
     $barcodeData = self::generateBarcode($membership);
 
     // Save card record
-    $card = new CRM_Membershipcard_DAO_MembershipCard();
-    $card->membership_id = $params['membership_id'];
-    $card->template_id = $params['template_id'];
-    if ($card->find(TRUE)) {
-      // Update existing card
+    if ($cardExists) {
+      // Update existing card (forced regeneration)
+      $card->modified_date = date('Y-m-d H:i:s');
+    }
+    else {
+      // Create new card
+      $card->created_date = date('Y-m-d H:i:s');
       $card->modified_date = date('Y-m-d H:i:s');
     }
     $card->front_card_data = json_encode($cardDataFront);
     $card->back_card_data = json_encode($cardDataBack);
     $card->qr_code = json_encode($qrData);
     $card->barcode = json_encode($barcodeData);
-    $card->created_date = date('Y-m-d H:i:s');
     $card->save();
 
     return [
@@ -1075,7 +1095,8 @@ class CRM_Membershipcard_API_MembershipCard {
         // Line is too wide, wrap it
         $wrappedLines = self::wrapText($line, $maxWidth, $font);
         $allLines = array_merge($allLines, $wrappedLines);
-      } else {
+      }
+      else {
         // Line fits, keep it as is
         $allLines[] = $line;
       }
@@ -1135,7 +1156,8 @@ class CRM_Membershipcard_API_MembershipCard {
 
       if ($testWidth <= $maxWidth) {
         $currentLine = $testLine;
-      } else {
+      }
+      else {
         // If current line is not empty, save it and start new line
         if (!empty($currentLine)) {
           $lines[] = $currentLine;
@@ -1146,7 +1168,8 @@ class CRM_Membershipcard_API_MembershipCard {
             $lines[] = self::truncateLineWithEllipsis($word, $maxWidth, $font);
             $currentLine = '';
           }
-        } else {
+        }
+        else {
           // Single word is too long, truncate it
           $lines[] = self::truncateLineWithEllipsis($word, $maxWidth, $font);
           $currentLine = '';
@@ -1167,10 +1190,18 @@ class CRM_Membershipcard_API_MembershipCard {
    * Get appropriate built-in font size based on fontSize
    */
   private static function getFontSize($fontSize) {
-    if ($fontSize <= 8) return 1;
-    if ($fontSize <= 10) return 2;
-    if ($fontSize <= 12) return 3;
-    if ($fontSize <= 14) return 4;
+    if ($fontSize <= 8) {
+      return 1;
+    }
+    if ($fontSize <= 10) {
+      return 2;
+    }
+    if ($fontSize <= 12) {
+      return 3;
+    }
+    if ($fontSize <= 14) {
+      return 4;
+    }
     return 5; // Maximum built-in font size
   }
 
@@ -1241,6 +1272,7 @@ class CRM_Membershipcard_API_MembershipCard {
 
     return $ellipsis; // If even one character is too wide
   }
+
   /**
    * Render text element
    */
@@ -1432,5 +1464,200 @@ class CRM_Membershipcard_API_MembershipCard {
     imagedestroy($image);
 
     return 'data:image/png;base64,' . base64_encode($imageData);
+  }
+
+  /**
+   * Email a membership card
+   *
+   * @param array $params
+   * @return array
+   * @throws API_Exception
+   */
+  public static function email($params) {
+    $required = ['card_id', 'email_to'];
+    foreach ($required as $field) {
+      if (empty($params[$field])) {
+        throw new API_Exception("Missing required field: $field");
+      }
+    }
+
+    // Validate email address
+    if (!filter_var($params['email_to'], FILTER_VALIDATE_EMAIL)) {
+      throw new API_Exception("Invalid email address: {$params['email_to']}");
+    }
+
+    // Get card data
+    $card = new CRM_Membershipcard_DAO_MembershipCard();
+    $card->id = $params['card_id'];
+
+    if (!$card->find(TRUE)) {
+      throw new API_Exception("Card not found with ID: {$params['card_id']}");
+    }
+
+    // Get membership and contact data for additional context
+    $membership = civicrm_api3('Membership', 'getsingle', [
+      'id' => $card->membership_id,
+    ]);
+
+    $contact = civicrm_api3('Contact', 'getsingle', [
+      'id' => $membership['contact_id'],
+    ]);
+
+    // Set up email parameters
+    $emailParams = [
+      'to' => $params['email_to'],
+      'subject' => $params['email_subject'] ?? ts('Your Membership Card'),
+      'html' => self::buildEmailContent($params, $contact, $membership, $card),
+      'text' => self::buildTextEmailContent($params, $contact, $membership),
+    ];
+
+    // Set from email
+    if (!empty($params['from_email'])) {
+      $emailParams['from'] = $params['from_email'];
+    }
+    else {
+      // Use default from email
+      $defaultFrom = civicrm_api3('OptionValue', 'get', [
+        'option_group_id' => 'from_email_address',
+        'is_default' => 1,
+      ]);
+      if (!empty($defaultFrom['values'])) {
+        $fromEmail = reset($defaultFrom['values']);
+        $emailParams['from'] = $fromEmail['label'];
+      }
+    }
+
+    // Attach PDF if requested
+    if (!empty($params['attach_pdf']) && $params['attach_pdf']) {
+      $pdfPath = self::generateCardPDF($card);
+      if ($pdfPath && file_exists($pdfPath)) {
+        $emailParams['attachments'] = [
+          [
+            'fullPath' => $pdfPath,
+            'mime_type' => 'application/pdf',
+            'cleanName' => "membership_card_{$card->id}.pdf",
+          ]
+        ];
+      }
+    }
+
+    // Send the email
+    $mailResult = CRM_Utils_Mail::send($emailParams);
+
+    // Clean up temporary PDF file if created
+    if (!empty($pdfPath) && file_exists($pdfPath)) {
+      unlink($pdfPath);
+    }
+
+    if (!$mailResult) {
+      throw new API_Exception("Failed to send email to {$params['email_to']}");
+    }
+
+    // Log the email activity
+    self::logEmailActivity($contact['id'], $params, $card);
+
+    return [
+      'card_id' => $card->id,
+      'email_sent_to' => $params['email_to'],
+      'subject' => $emailParams['subject'],
+      'sent_date' => date('Y-m-d H:i:s'),
+    ];
+  }
+
+  /**
+   * Build HTML email content
+   */
+  protected static function buildEmailContent($params, $contact, $membership, $card) {
+    $message = $params['email_message'] ?? ts('Dear %1, please find your membership card attached.', [
+      1 => $contact['display_name']
+    ]);
+
+    $downloadUrl = CRM_Utils_System::url('civicrm/membership-card/download',
+      "card_id={$card->id}", TRUE);
+
+    $html = "
+    <div style='font-family: Arial, sans-serif; max-width: 600px;'>
+      <h2>Your Membership Card</h2>
+      <p>{$message}</p>
+      
+      <div style='background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;'>
+        <h3>Membership Details:</h3>
+        <p><strong>Member Name:</strong> {$contact['display_name']}</p>
+        <p><strong>Membership ID:</strong> {$membership['id']}</p>
+        <p><strong>Status:</strong> {$membership['status_id']}</p>
+      </div>
+      
+      <p><a href='{$downloadUrl}' style='background: #007cba; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px;'>Download Card</a></p>
+      
+      <p style='color: #666; font-size: 12px; margin-top: 30px;'>
+        If you have any questions about your membership, please contact us.
+      </p>
+    </div>";
+
+    return $html;
+  }
+
+  /**
+   * Build plain text email content
+   */
+  protected static function buildTextEmailContent($params, $contact, $membership) {
+    $message = $params['email_message'] ?? ts('Dear %1, please find your membership card attached.', [
+      1 => $contact['display_name']
+    ]);
+
+    return "
+Your Membership Card
+
+{$message}
+
+Membership Details:
+- Member Name: {$contact['display_name']}
+- Membership ID: {$membership['id']}
+- Status: {$membership['status_id']}
+
+If you have any questions about your membership, please contact us.
+";
+  }
+
+  /**
+   * Generate PDF for the card
+   */
+  protected static function generateCardPDF($card) {
+    try {
+      // This would integrate with your existing PDF generation logic
+      // For now, returning a placeholder path
+      $tempDir = CRM_Core_Config::singleton()->configAndLogDir;
+      $pdfPath = $tempDir . "membership_card_{$card->id}.pdf";
+
+      // Call your existing PDF generation method here
+      // Example: CRM_Membershipcard_Utils_PDF::generateCard($card, $pdfPath);
+
+      return $pdfPath;
+    }
+    catch (Exception $e) {
+      CRM_Core_Error::debug_log_message('Failed to generate PDF: ' . $e->getMessage());
+      return NULL;
+    }
+  }
+
+  /**
+   * Log email activity
+   */
+  protected static function logEmailActivity($contactId, $params, $card) {
+    try {
+      civicrm_api3('Activity', 'create', [
+        'activity_type_id' => 'Email',
+        'subject' => $params['email_subject'] ?? 'Membership Card Sent',
+        'details' => "Membership card (ID: {$card->id}) emailed to {$params['email_to']}",
+        'status_id' => 'Completed',
+        'source_contact_id' => CRM_Core_Session::getLoggedInContactID(),
+        'target_contact_id' => $contactId,
+        'activity_date_time' => date('Y-m-d H:i:s'),
+      ]);
+    }
+    catch (Exception $e) {
+      // Don't fail if activity logging fails
+      CRM_Core_Error::debug_log_message('Failed to log email activity: ' . $e->getMessage());
+    }
   }
 }

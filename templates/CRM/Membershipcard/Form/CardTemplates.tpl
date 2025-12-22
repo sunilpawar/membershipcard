@@ -568,10 +568,10 @@
     }
 
     var actionMessages = {
-      'activate': '{/literal}{ts escape="js"}Are you sure you want to activate {count} template(s)?{/ts}{literal}',
-      'deactivate': '{/literal}{ts escape="js"}Are you sure you want to deactivate {count} template(s)?{/ts}{literal}',
-      'export': '{/literal}{ts escape="js"}Export {count} template(s) as a ZIP file?{/ts}{literal}',
-      'delete': '{/literal}{ts escape="js"}Are you sure you want to delete {count} template(s)? This action cannot be undone.{/ts}{literal}'
+      'activate': '{/literal}{ts escape="js"}Are you sure you want to activate template(s)?{/ts}{literal}',
+      'deactivate': '{/literal}{ts escape="js"}Are you sure you want to deactivate template(s)?{/ts}{literal}',
+      'export': '{/literal}{ts escape="js"}Export template(s) as a ZIP file?{/ts}{literal}',
+      'delete': '{/literal}{ts escape="js"}Are you sure you want to delete template(s)? This action cannot be undone.{/ts}{literal}'
     };
 
     var message = actionMessages[action].replace('{count}', selectedIds.length);
