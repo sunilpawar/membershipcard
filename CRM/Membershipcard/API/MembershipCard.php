@@ -161,11 +161,6 @@ class CRM_Membershipcard_API_MembershipCard {
     }
     $params['template_id'] = $membershipType['template_id'];
 
-
-    // Get contact data
-    $contact = civicrm_api3('Contact', 'getsingle', [
-      'id' => $membership['contact_id'],
-    ]);
     // Get template
     $template = CRM_Membershipcard_API_MembershipCardTemplate::get([
       'id' => $params['template_id']
@@ -197,8 +192,8 @@ class CRM_Membershipcard_API_MembershipCard {
       ];
     }
     // Generate new card data (either new card or forced regeneration)
-    $cardDataFront = self::processTemplate($template, $contact, $membership, $membershipType, TRUE);
-    $cardDataBack = self::processTemplate($template, $contact, $membership, $membershipType, FALSE);
+    $cardDataFront = self::processTemplate($template, $membership['contact_id'], $params['membership_id'], TRUE);
+    $cardDataBack = self::processTemplate($template, $membership['contact_id'], $params['membership_id'], FALSE);
     $qrData = self::generateQRCode($membership);
     $barcodeData = self::generateBarcode($membership);
 
