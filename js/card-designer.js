@@ -223,9 +223,15 @@ class MembershipCardDesigner {
 
     if (sideData.elements) {
       this.canvas.loadFromJSON(sideData.elements, () => {
-        // Mark all objects with current side
+        // Ensure scales are properly applied after loading
         this.canvas.forEachObject((obj) => {
           obj.set('cardSide', this.currentSide);
+
+          // If it's an image, ensure scale is applied
+          if (obj.type === 'image' && (obj.scaleX !== 1 || obj.scaleY !== 1)) {
+            // Scale is already in the JSON, just make sure it's applied
+            obj.setCoords();
+          }
         });
         this.canvas.renderAll();
       });
@@ -925,6 +931,28 @@ class MembershipCardDesigner {
         this.saveState();
       }
     });
+
+    // Update image width
+    document.getElementById('image-width').addEventListener('input', (e) => {
+      if (this.selectedElement && this.selectedElement.type === 'image') {
+        const newWidth = parseInt(e.target.value);
+        const scale = newWidth / this.selectedElement.width;
+        this.selectedElement.set('scaleX', scale);
+        this.canvas.renderAll();
+        this.saveState();
+      }
+    });
+
+    // Update image height
+    document.getElementById('image-height').addEventListener('input', (e) => {
+      if (this.selectedElement && this.selectedElement.type === 'image') {
+        const newHeight = parseInt(e.target.value);
+        const scale = newHeight / this.selectedElement.height;
+        this.selectedElement.set('scaleY', scale);
+        this.canvas.renderAll();
+        this.saveState();
+      }
+    });
   }
 
   bindEvents() {
@@ -980,7 +1008,7 @@ class MembershipCardDesigner {
     const saveBtn = document.getElementById('save-template');
     if (saveBtn) {
       saveBtn.addEventListener('click', () => {
-        this.saveTemplate();
+        //this.saveTemplate();
       });
     }
 
@@ -1084,8 +1112,11 @@ class MembershipCardDesigner {
       document.getElementById('text-color').value = this.selectedElement.fill;
     } else if (this.selectedElement.type === 'image') {
       document.getElementById('image-properties').style.display = 'block';
-      document.getElementById('image-width').value = Math.round(this.selectedElement.width * this.selectedElement.scaleX);
-      document.getElementById('image-height').value = Math.round(this.selectedElement.height * this.selectedElement.scaleY);
+      const actualWidth = Math.round(this.selectedElement.width * this.selectedElement.scaleX);
+      const actualHeight = Math.round(this.selectedElement.height * this.selectedElement.scaleY);
+
+      document.getElementById('image-width').value = actualWidth;
+      document.getElementById('image-height').value = actualHeight;
     }
   }
 

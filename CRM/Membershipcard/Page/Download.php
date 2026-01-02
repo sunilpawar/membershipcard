@@ -35,4 +35,32 @@ class CRM_Membershipcard_Page_Download extends CRM_Core_Page {
       CRM_Core_Error::fatal('Error downloading card: ' . $e->getMessage());
     }
   }
+
+  public static function quickGenerateDownload() {
+    $contactID = CRM_Utils_Request::retrieve('cid', 'Positive');
+    $membershipID = CRM_Utils_Request::retrieve('mid', 'Positive');
+    $contactID = $contactID ?? NULL;
+    $membershipID = $membershipID ?? NULL;
+    $template_id = 7;
+    $result = CRM_Membershipcard_API_MembershipCard::quickGenerate($template_id, 'pdf', $contactID, $membershipID);
+
+    // Set headers for file download
+    header('Content-Type: ' . $result['mime_type']);
+    header('Content-Disposition: attachment; filename="' . $result['filename'] . '"');
+
+    // Extract base64 data and output
+    if ($result['mime_type'] == 'application/pdf') {
+      // For PDF, decode base64 data
+      echo base64_decode($result['pdf_data']);
+    }
+    elseif (strpos($result['image_data'], 'data:') === 0) {
+      $imageData = explode(',', $result['image_data'], 2)[1];
+      echo base64_decode($imageData);
+    }
+    else {
+      echo $result['image_data'];
+    }
+
+    CRM_Utils_System::civiExit();
+  }
 }

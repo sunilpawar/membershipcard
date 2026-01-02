@@ -250,6 +250,8 @@
                 <option value="Georgia">Georgia</option>
                 <option value="Verdana">Verdana</option>
                 <option value="Impact">Impact</option>
+                <option value="'Gotham Book', sans-serif">Gotham Book</option>
+                <option value="'Source Code Pro', monospace">Source Code Pro</option>
               </select>
             </div>
             <div class="form-group">
@@ -519,8 +521,13 @@
 
     function cropImageSquare() {
       if (window.cardDesigner && window.cardDesigner.selectedElement && window.cardDesigner.selectedElement.type === 'image') {
-        const img = window.cardDesigner.selectedElement;
-        const size = Math.min(img.width, img.height);
+        // Get the actual scaled dimensions
+        const actualWidth = img.width * img.scaleX;
+        const actualHeight = img.height * img.scaleY;
+
+        const size = Math.min(actualWidth, actualHeight);
+
+        // Set the new scale to maintain the square aspect ratio
         img.set({
           scaleX: size / img.width,
           scaleY: size / img.height

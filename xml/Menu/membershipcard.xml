@@ -48,6 +48,14 @@
     <page_callback>CRM_Membershipcard_Page_Download</page_callback>
     <access_arguments>access CiviMember</access_arguments>
   </item>
+  <!-- Download Card -->
+  <item>
+    <path>civicrm/membership-card/quick-generate</path>
+    <title>Generate and Download Membership Card</title>
+    <desc>Generate and Download a membership card</desc>
+    <page_callback>CRM_Membershipcard_Page_Download::quickGenerateDownload</page_callback>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
   <!-- Verify Card -->
   <item>
     <path>civicrm/membership-card/verify</path>
@@ -97,7 +105,6 @@
     <page_callback>CRM_Membershipcard_Form_Import</page_callback>
     <access_arguments>administer CiviCRM</access_arguments>
   </item>
-
   <item>
     <path>civicrm/membership-card/settings</path>
     <title>Membership Card Settings</title>
@@ -125,6 +132,12 @@
     <path>civicrm/membershipcard-list</path>
     <page_callback>CRM_Membershipcard_Page_MembershipCards</page_callback>
     <title>MembershipCards</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/admin/card-settings</path>
+    <page_callback>CRM_Membershipcard_Form_Settings</page_callback>
+    <title>Settings</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
 </menu>

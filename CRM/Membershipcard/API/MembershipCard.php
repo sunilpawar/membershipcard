@@ -22,6 +22,120 @@ class CRM_Membershipcard_API_MembershipCard {
   }
 
   /**
+   * Function quick generate card.
+   *
+   * @param $templateID
+   * @param $format
+   * @param $contactID
+   * @param $membershipID
+   * @return array
+   * @throws API_Exception
+   * @throws CRM_Core_Exception
+   */
+  public static function quickGenerate($templateID, $format = 'image',
+                                       $contactID = NULL,
+                                       $membershipID = NULL) {
+    $params = [];
+    if (empty($templateID)) {
+      throw new API_Exception("Missing template_id");
+    }
+
+
+    // Get contact data
+    if ($contactID) {
+      $contact = civicrm_api3('Contact', 'getsingle', [
+        'id' => $contactID,
+      ]);
+    }
+    else {
+      $contact = civicrm_api3('Contact', 'getsingle', [
+        'id' => 'user_contact_id',
+      ]);
+      $contactID = $contact['contact_id'];
+    }
+    // Get template
+    $template = CRM_Membershipcard_API_MembershipCardTemplate::get([
+      'id' => $templateID
+    ]);
+
+    if (empty($template['values'])) {
+      throw new API_Exception("Template not found");
+    }
+
+    $template = $template['values'][0];
+
+    $membership = NULL;
+    // Generate new card data (either new card or forced regeneration)
+    $cardDataFront = self::processTemplate($template, $contactID, $membershipID, TRUE);
+    $cardDataBack = self::processTemplate($template, $contactID, $membershipID, FALSE);
+
+    if (!empty($membershipID)) {
+      $qrData = self::generateQRCode($membership);
+      $barcodeData = self::generateBarcode($membership);
+    }
+    $frontResult = $backResult = [];
+    if ($template['is_dual_sided']) {
+      $imageDataFront = self::generateCardImage($cardDataFront, 'front');
+      $imageDataBack = self::generateCardImage($cardDataBack, 'back');
+      $frontResult = [
+        'image_data' => $imageDataFront,
+        'filename' => "membership-card-front.png",
+        'mime_type' => 'image/png',
+      ];
+
+      $backResult = [
+        'image_data' => $imageDataBack,
+        'filename' => "membership-card-back.png",
+        'mime_type' => 'image/png',
+      ];
+      if ($format === 'image') {
+        $frontResult['image_data'] = self::combineCardSides($imageDataFront, $imageDataBack);
+      }
+    }
+    else {
+      // if template is not dual sided, return only front side image.
+      $imageDataFront = self::generateCardImage($cardDataFront, 'front');
+      $frontResult = [
+        'image_data' => $imageDataFront,
+        'filename' => "membership-card-front.png",
+        'mime_type' => 'image/png',
+      ];
+      $backResult = [];
+    }
+    switch ($format) {
+      case 'image':
+        return [
+          'image_data' => $frontResult['image_data'],
+          'filename' => "membership-card-both-sides.png",
+          'mime_type' => 'image/png',
+          'sides' => 'both'
+        ];
+      case 'pdf':
+        $pdfData = self::generateDualSidePDF($frontResult, $backResult);
+        return [
+          'pdf_data' => $pdfData,
+          'filename' => "membership-card-both-sides.pdf",
+          'mime_type' => 'application/pdf',
+          'sides' => 'both'
+        ];
+
+      default: // separate
+        return [
+          'front_image' => $frontResult['image_data'] ?? '',
+          'back_image' => $backResult['image_data'] ?? '',
+          'filename' => "membership-card-both-sides.zip",
+          'mime_type' => 'application/zip',
+          'sides' => 'both'
+        ];
+    }
+
+    return [
+      'front_card_data' => $cardDataFront,
+      'back_card_data' => $cardDataBack,
+    ];
+  }
+
+  /**
    * Generate a membership card
    */
   public static function generate($params) {
@@ -118,32 +232,24 @@ class CRM_Membershipcard_API_MembershipCard {
   /**
    * Process template with actual data
    */
-  public static function processTemplate($template, $contact, $membership, $membershipType, $isFront = TRUE) {
+  public static function processTemplate($template, $contactID, $membershipID = NULL , $isFront = TRUE) {
     // Prepare token data
     $tokenData = [
-      '{contact.external_identifier}' => $contact['external_identifier'],
-      '{contact.display_name}' => $contact['display_name'],
-      '{contact.first_name}' => $contact['first_name'],
-      '{contact.last_name}' => $contact['last_name'],
-      '{contact.email}' => CRM_Utils_Array::value('email', $contact),
-      '{contact.phone}' => CRM_Utils_Array::value('phone', $contact),
-      '{contact.street_address}' => CRM_Utils_Array::value('street_address', $contact),
-      '{contact.city}' => CRM_Utils_Array::value('city', $contact),
-      '{contact.state_province}' => CRM_Utils_Array::value('state_province_name', $contact),
-      '{contact.postal_code}' => CRM_Utils_Array::value('postal_code', $contact),
-      '{contact.image_URL}' => CRM_Utils_Array::value('image_URL', $contact),
-      '{membership.membership_type}' => $membershipType['name'],
-      '{membership.status}' => CRM_Core_PseudoConstant::getLabel('CRM_Member_BAO_Membership', 'status_id', $membership['status_id']),
-      '{membership.start_date}' => CRM_Utils_Date::customFormat($membership['start_date']),
-      '{membership.end_date}' => CRM_Utils_Date::customFormat($membership['end_date']),
-      '{membership.join_date}' => CRM_Utils_Date::customFormat($membership['join_date']),
-      '{membership.membership_id}' => $membership['id'],
-      '{membership.source}' => CRM_Utils_Array::value('source', $membership),
-      '{organization.organization_name}' => CRM_Core_BAO_Domain::getDomain()->name,
       '{system.current_date}' => date('Y-m-d'),
-      '{system.qr_code}' => "MEMBER:{$membership['id']}",
-      '{system.barcode}' => str_pad($membership['id'], 12, '0', STR_PAD_LEFT),
     ];
+    $membership = [];
+    if (!empty($membershipID)) {
+      try {
+        $membership = civicrm_api3('Membership', 'getsingle', [
+          'id' => $membershipID,
+        ]);
+        $tokenData['{system.qr_code}'] = "MEMBER:{$membership['id']}";
+        $tokenData['{system.barcode}'] = str_pad($membership['id'], 12, '0', STR_PAD_LEFT);
+      }
+      catch (Exception $e) {
+        // ignore
+      }
+    }
 
     // Process template elements
     if ($isFront) {
@@ -157,6 +263,22 @@ class CRM_Membershipcard_API_MembershipCard {
         if ($obj['type'] === 'text' && !empty($obj['text'])) {
           // Replace tokens in text
           $obj['text'] = str_replace(array_keys($tokenData), array_values($tokenData), $obj['text']);
+          // echo '<pre>AA - '; print_r($obj['text']); echo '</pre>';
+          // @todo do we want to allow smarty and/or html
+          $tokenProcessor = new \Civi\Token\TokenProcessor(\Civi::dispatcher(), ['smarty' => FALSE, 'schema' => ['contactId', 'membershipId']]);
+          $tokenProcessor->addMessage('cardText', $obj['text'], 'text/plain');
+          $tokenContactInput = ['contactId' => $contactID];
+          if ($membershipID) {
+            $tokenContactInput['membershipId'] = $membershipID;
+          }
+          $tokenProcessor->addRow($tokenContactInput);
+          $tokenProcessor->evaluate();
+          $obj['text'] = trim($tokenProcessor->getRow(0)->render('cardText'));
+          /*
+          foreach ($tokenProcessor->getRows() as $row) {
+            $obj['text'] = $row->render('cardText');
+          }
+          */
         }
       }
     }
@@ -632,7 +754,6 @@ class CRM_Membershipcard_API_MembershipCard {
       $frontHeight = imagesy($frontImage);
       $backWidth = imagesx($backImage);
       $backHeight = imagesy($backImage);
-
       // Calculate combined image dimensions
       if ($options['layout'] === 'horizontal') {
         $combinedWidth = $frontWidth + $backWidth + $options['spacing'];
@@ -642,7 +763,6 @@ class CRM_Membershipcard_API_MembershipCard {
         $combinedWidth = max($frontWidth, $backWidth);
         $combinedHeight = $frontHeight + $backHeight + $options['spacing'];
       }
-
       // Create combined image canvas
       $combinedImage = imagecreatetruecolor($combinedWidth, $combinedHeight);
 
@@ -702,7 +822,7 @@ class CRM_Membershipcard_API_MembershipCard {
    * @param array $options PDF generation options
    * @return string Base64 encoded PDF data
    */
-  private static function generateDualSidePDF($frontResult, $backResult, $options = []) {
+  private static function generateDualSidePDF($frontResult, $backResult = [], $options = []) {
     // Check if TCPDF is available
     if (!class_exists('TCPDF')) {
       throw new Exception("TCPDF library is required for PDF generation");
@@ -742,13 +862,14 @@ class CRM_Membershipcard_API_MembershipCard {
 
       // Convert base64 images to temporary files
       $frontImageData = preg_replace('/^data:image\/[^;]+;base64,/', '', $frontResult['image_data']);
-      $backImageData = preg_replace('/^data:image\/[^;]+;base64,/', '', $backResult['image_data']);
-
       $frontTempFile = tempnam(sys_get_temp_dir(), 'front_card_') . '.png';
-      $backTempFile = tempnam(sys_get_temp_dir(), 'back_card_') . '.png';
-
       file_put_contents($frontTempFile, base64_decode($frontImageData));
-      file_put_contents($backTempFile, base64_decode($backImageData));
+
+      if (!empty($backResult)) {
+        $backImageData = preg_replace('/^data:image\/[^;]+;base64,/', '', $backResult['image_data']);
+        $backTempFile = tempnam(sys_get_temp_dir(), 'back_card_') . '.png';
+        file_put_contents($backTempFile, base64_decode($backImageData));
+      }
 
       // Calculate positions
       $cardWidth = $options['card_width'];
@@ -772,9 +893,10 @@ class CRM_Membershipcard_API_MembershipCard {
       // Add front card image
       $pdf->Image($frontTempFile, $frontX, $frontY, $cardWidth, $cardHeight, 'PNG', '', 'T', FALSE, 300, '', FALSE, FALSE, 0, FALSE, FALSE, FALSE);
 
-      // Add back card image
-      $pdf->Image($backTempFile, $backX, $backY, $cardWidth, $cardHeight, 'PNG', '', 'T', FALSE, 300, '', FALSE, FALSE, 0, FALSE, FALSE, FALSE);
-
+      if (!empty($backResult)) {
+        // Add back card image
+        $pdf->Image($backTempFile, $backX, $backY, $cardWidth, $cardHeight, 'PNG', '', 'T', FALSE, 300, '', FALSE, FALSE, 0, FALSE, FALSE, FALSE);
+      }
       // Add labels
       $pdf->SetFont('helvetica', 'B', 10);
       $pdf->SetTextColor(0, 0, 0);
