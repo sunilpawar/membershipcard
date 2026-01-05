@@ -189,6 +189,8 @@ function membershipcard_civicrm_links($op, $objectName, $objectId, &$links, &$ma
   if ($objectName != 'Membership') {
     return;
   }
+  // not enabled.
+  return;
 
   // Only act on the membership tab view operations
   if ($op == 'membership.tab.row') {
