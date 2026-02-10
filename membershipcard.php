@@ -164,6 +164,56 @@ function membershipcard_civicrm_buildForm($formName, &$form) {
       $form->setDefaults($membershipExtras);
     }
   }
+  elseif (in_array($formName, ['CRM_Admin_Form_ScheduleReminders'])) {
+    $form->add('checkbox', 'is_membership_template_enabled', E::ts('Should Membership Card attached to email?'));
+    $attribute = ['class' => 'crm-select2', 'placeholder' => E::ts('- any -')];
+    $shippableTo = CRM_Membershipcard_API_MembershipCardTemplate::cardTemplates();
+    $form->add('select', 'template_id', E::ts('Template List'), $shippableTo, FALSE, $attribute);
+    if ($form->_action & CRM_Core_Action::UPDATE && !empty($form->_id)) {
+      $domainID = CRM_Core_Config::domainID();
+      $settings = Civi::settings($domainID);
+      $form->setDefaults(['is_membership_template_enabled' => $settings->get('schedule_reminders_is_membership_template_enabled_' . $form->_id)]);
+      $form->setDefaults(['template_id' => $settings->get('schedule_reminders_template_id_' . $form->_id)]);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_civicrm_postProcess()
+ *
+ * Record information about a discount use.
+ */
+function membershipcard_civicrm_postProcess($class, &$form) {
+  if (in_array($class, ['CRM_Admin_Form_ScheduleReminders'])) {
+    if ($form->get('id')) {
+      $id = $form->get('id');
+      $is_membership_template_enabled = $form->_submitValues['is_membership_template_enabled'] ?? NULL;
+      $template_id = $form->_submitValues['template_id'] ?? NULL;
+      $domainID = CRM_Core_Config::domainID();
+      $settings = Civi::settings($domainID);
+      $settings->set('schedule_reminders_is_membership_template_enabled_' . $id, $is_membership_template_enabled);
+      $settings->set('schedule_reminders_template_id_' . $id, $template_id);
+    }
+  }
+}
+
+/*
+ * Implementation of hook_civicrm_alterMailParams
+ */
+function membershipcard_civicrm_alterMailParams(&$params) {
+  if (!empty($params['groupName']) && $params['groupName'] == 'Scheduled Reminder Sender'
+    && $params['entity'] == 'action_schedule' && !empty($params['entity_id'])) {
+    $domainID = CRM_Core_Config::domainID();
+    $settings = Civi::settings($domainID);
+    // check schedule reminder enabled to card membership
+    if (!empty($params['contactId']) && $settings->get('schedule_reminders_is_membership_template_enabled_' . $params['entity_id'])) {
+      $tempalteID = $settings->get('schedule_reminders_template_id_' . $params['entity_id']);
+      if ($tempalteID && $params['contactId']) {
+        $membershipId = $params['membershipId'] ?? NULL;
+        CRM_Membershipcard_Page_Download::attachPdf($params, $tempalteID, $params['contactId'], $membershipId);
+      }
+    }
+  }
 }
 
 /**

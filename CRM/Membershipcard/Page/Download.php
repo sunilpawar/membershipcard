@@ -63,4 +63,32 @@ class CRM_Membershipcard_Page_Download extends CRM_Core_Page {
 
     CRM_Utils_System::civiExit();
   }
+
+  public static function attachPdf(&$params, $template_id, $contactID, $membershipID = NULL) {
+    $result = CRM_Membershipcard_API_MembershipCard::quickGenerate($template_id, 'pdf', $contactID, $membershipID);
+    if ($result['mime_type'] == 'application/pdf') {
+      // For PDF, decode base64 data
+      $file = base64_decode($result['pdf_data']);
+    }
+    elseif (strpos($result['image_data'], 'data:') === 0) {
+      $imageData = explode(',', $result['image_data'], 2)[1];
+      $file = base64_decode($imageData);
+    }
+    else {
+      $file = $result['image_data'];
+    }
+    $mimeType = $result['mime_type'];
+
+
+    // attach to email
+    $base = "membership_card_{$contactID}.pdf";
+    $full = tempnam(sys_get_temp_dir(), $base);
+    file_put_contents($full, $file);
+    $params['attachments'][] = [
+      'fullPath' => $full,
+      'mime_type' => $mimeType,
+      'cleanName' => $base,
+    ];
+    $params['card_processed_' . $contactID] = TRUE;
+  }
 }
