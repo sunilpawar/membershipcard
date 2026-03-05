@@ -1,9 +1,8 @@
-{if $form.is_membership_template_enabled}
 {literal}
   <script type="text/javascript">
     CRM.$(function($) {
-      $('#form-layout-compressed_template_id').insertAfter('.crm-scheduleReminder-form-block-active');
-      $('#form-layout-compressed_is_membership_template_enabled').insertAfter('.crm-scheduleReminder-form-block-active');
+      $('#form-layout-compressed_template_id').insertAfter('.crm-contactEmail-form-block-subject');
+      $('#form-layout-compressed_is_membership_template_enabled').insertAfter('.crm-contactEmail-form-block-subject');
     });
   </script>
 {/literal}
@@ -18,4 +17,3 @@
     <td>{$form.template_id.html}</td>
   </tr>
 </table>
-{/if}

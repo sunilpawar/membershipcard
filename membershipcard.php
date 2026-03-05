@@ -176,6 +176,12 @@ function membershipcard_civicrm_buildForm($formName, &$form) {
       $form->setDefaults(['template_id' => $settings->get('schedule_reminders_template_id_' . $form->_id)]);
     }
   }
+  elseif (in_array($formName, ['CRM_Contact_Form_Task_Email'])) {
+    $form->add('checkbox', 'is_membership_template_enabled', E::ts('Should Membership Card attached to email?'));
+    $attribute = ['class' => 'crm-select2', 'placeholder' => E::ts('- any -')];
+    $shippableTo = CRM_Membershipcard_API_MembershipCardTemplate::cardTemplates();
+    $form->add('select', 'template_id', E::ts('Membership Card to Attachment'), $shippableTo, FALSE, $attribute);
+  }
 }
 
 /**
@@ -212,6 +218,13 @@ function membershipcard_civicrm_alterMailParams(&$params) {
         $membershipId = $params['membershipId'] ?? NULL;
         CRM_Membershipcard_Page_Download::attachPdf($params, $tempalteID, $params['contactId'], $membershipId);
       }
+    }
+  }
+  elseif (!empty($params['groupName']) && $params['groupName'] == 'Activity Email Sender' && !empty($params['contactId'])) {
+    if (!empty($_POST['is_membership_template_enabled']) && !empty($_POST['template_id'])) {
+      $tempalteID = CRM_Utils_Type::escape($_POST['template_id'], 'Positive');
+      $membershipId = $params['membershipId'] ?? NULL;
+      CRM_Membershipcard_Page_Download::attachPdf($params, $tempalteID, $params['contactId'], $membershipId);
     }
   }
 }
