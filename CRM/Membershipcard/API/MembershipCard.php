@@ -227,7 +227,7 @@ class CRM_Membershipcard_API_MembershipCard {
   /**
    * Process template with actual data
    */
-  public static function processTemplate($template, $contactID, $membershipID = NULL , $isFront = TRUE) {
+  public static function processTemplate($template, $contactID, $membershipID = NULL, $isFront = TRUE) {
     // Prepare token data
     $tokenData = [
       '{system.current_date}' => date('Y-m-d'),
@@ -896,14 +896,6 @@ class CRM_Membershipcard_API_MembershipCard {
       $pdf->SetFont('helvetica', 'B', 10);
       $pdf->SetTextColor(0, 0, 0);
 
-      // Front label
-      $pdf->SetXY($frontX, $frontY + $cardHeight + 2);
-      $pdf->Cell($cardWidth, 5, 'FRONT', 0, 0, 'C');
-
-      // Back label
-      $pdf->SetXY($backX, $backY + $cardHeight + 2);
-      $pdf->Cell($cardWidth, 5, 'BACK', 0, 0, 'C');
-
       // Add cutting guidelines if requested
       if (!empty($options['show_cut_lines'])) {
         $pdf->SetDrawColor(200, 200, 200);
@@ -1175,22 +1167,39 @@ class CRM_Membershipcard_API_MembershipCard {
   }
 
   /**
-   * Render text element with proper multi-line and dimension handling
+   * Render a text element onto the card image using TrueType fonts.
+   *
+   * Previously this used PHP GD's built-in bitmap fonts (imagestring), which
+   * always rendered in a Courier-like monospace face regardless of the
+   * fontFamily setting.  It now uses imagettftext() so the font family,
+   * weight, and style stored in the template are actually honoured.
    */
   private static function renderTextElement($image, $element, $options) {
     // Extract text properties
     $text = $element['text'] ?? '';
+    if ($text === '') {
+      return;
+    }
+
     $left = (int)($element['left'] ?? 0);
     $top = (int)($element['top'] ?? 0);
     $maxWidth = (int)($element['width'] ?? 200);
     $maxHeight = (int)($element['height'] ?? 50);
-    $fontSize = (int)($element['fontSize'] ?? 12);
+    $fontSize = (float)($element['fontSize'] ?? 12);
     $fontColor = $element['fill'] ?? '#000000';
     $fontFamily = $element['fontFamily'] ?? 'Arial';
+    $fontWeight = strtolower($element['fontWeight'] ?? 'normal');
+    $fontStyle = strtolower($element['fontStyle'] ?? 'normal');
     $textAlign = $element['textAlign'] ?? 'left';
     $lineHeight = (float)($element['lineHeight'] ?? 1.16);
 
-    // Convert color
+    $bold = ($fontWeight === 'bold' || (int)$fontWeight >= 700);
+    $italic = ($fontStyle === 'italic' || $fontStyle === 'oblique');
+
+    // Resolve TTF font file
+    $fontPath = self::getFontPath($fontFamily, $bold, $italic);
+
+    // Convert hex colour to GD colour index
     $color = self::hexToRgb($fontColor);
     $textColor = imagecolorallocate($image, $color['r'], $color['g'], $color['b']);
 
@@ -1210,8 +1219,8 @@ class CRM_Membershipcard_API_MembershipCard {
 
       if ($lineWidth > $maxWidth && $maxWidth > 0) {
         // Line is too wide, wrap it
-        $wrappedLines = self::wrapText($line, $maxWidth, $font);
-        $allLines = array_merge($allLines, $wrappedLines);
+        $wrapped = self::wrapText($line, $maxWidth, $font);
+        $allLines = array_merge($allLines, $wrapped);
       }
       else {
         // Line fits, keep it as is
@@ -1241,12 +1250,15 @@ class CRM_Membershipcard_API_MembershipCard {
     // Render each line
     foreach ($allLines as $index => $line) {
       $y = $startY + ($index * $pixelLineHeight);
+      if ($index >= 1) {
+        $y += ($index * 2); // Add extra spacing between lines if needed
+      }
 
       // Calculate X position based on text alignment
       $x = self::calculateTextX($left, $maxWidth, $line, $textAlign, $font);
 
       // Render the line
-      imagestring($image, $font, $x, $y, $line, $textColor);
+      imagettftext($image, $fontSize, 0, (int)$x, (int)$y, $textColor, $fontPath, $line);
     }
   }
 
@@ -1387,7 +1399,84 @@ class CRM_Membershipcard_API_MembershipCard {
       }
     }
 
-    return $ellipsis; // If even one character is too wide
+    return $ellipsis;
+  }
+
+  /**
+   * Get the TTF font file path for a given font family and style.
+   *
+   * Fonts are bundled in the extension's fonts/ directory.  Liberation Sans
+   * is metric-compatible with Arial/Helvetica, Liberation Serif with Times
+   * New Roman, and Liberation Mono with Courier New.
+   *
+   * @param string $fontFamily e.g. 'Arial', 'Helvetica', 'Times', 'Courier'
+   * @param bool $bold
+   * @param bool $italic
+   * @return string  Absolute path to the .ttf file
+   */
+  private static function getFontPath($fontFamily = 'Arial', $bold = FALSE, $italic = FALSE) {
+    // Base directory: <extension_root>/fonts/
+    $fontDir = __DIR__ . '/../../../fonts/';
+
+    // Normalise: lowercase, strip spaces/hyphens
+    $family = strtolower(str_replace([' ', '-'], '', $fontFamily));
+
+    // Map common CSS / design-tool names → Liberation family base name
+    $familyMap = [
+      // Sans-serif  →  LiberationSans  (Arial / Helvetica compatible)
+      'arial' => 'LiberationSans',
+      'helvetica' => 'LiberationSans',
+      'helveticaneue' => 'LiberationSans',
+      'liberationsans' => 'LiberationSans',
+      'sans' => 'LiberationSans',
+      'sansserif' => 'LiberationSans',
+      'opensans' => 'LiberationSans',
+      'roboto' => 'LiberationSans',
+      'lato' => 'LiberationSans',
+      // Serif  →  LiberationSerif  (Times New Roman compatible)
+      'times' => 'LiberationSerif',
+      'timesnewroman' => 'LiberationSerif',
+      'liberationserif' => 'LiberationSerif',
+      'serif' => 'LiberationSerif',
+      'georgia' => 'LiberationSerif',
+      // Monospace  →  LiberationMono  (Courier compatible)
+      'courier' => 'LiberationMono',
+      'couriernew' => 'LiberationMono',
+      'liberationmono' => 'LiberationMono',
+      'mono' => 'LiberationMono',
+      'monospace' => 'LiberationMono',
+      'consolas' => 'LiberationMono',
+    ];
+
+    $baseFamily = $familyMap[$family] ?? 'LiberationSans';
+
+    // Build style suffix
+    if ($bold && $italic) {
+      $suffix = '-BoldItalic';
+    }
+    elseif ($bold) {
+      $suffix = '-Bold';
+    }
+    elseif ($italic) {
+      $suffix = '-Italic';
+    }
+    else {
+      $suffix = '-Regular';
+    }
+
+    // LiberationMono ships only Regular + Bold in our bundle (no Italic)
+    if ($baseFamily === 'LiberationMono' && $italic) {
+      $suffix = $bold ? '-Bold' : '-Regular';
+    }
+
+    $path = $fontDir . $baseFamily . $suffix . '.ttf';
+
+    // Safety fallback: if file is somehow missing, use Regular sans-serif
+    if (!file_exists($path)) {
+      $path = $fontDir . 'LiberationSans-Regular.ttf';
+    }
+
+    return $path;
   }
 
   /**

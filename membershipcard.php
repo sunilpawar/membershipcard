@@ -177,10 +177,10 @@ function membershipcard_civicrm_buildForm($formName, &$form) {
     }
   }
   elseif (in_array($formName, ['CRM_Contact_Form_Task_Email'])) {
-    $form->add('checkbox', 'is_membership_template_enabled', E::ts('Should Membership Card attached to email?'));
+    $form->add('checkbox', 'is_membership_template_enabled', E::ts('Attach Membership Card'));
     $attribute = ['class' => 'crm-select2', 'placeholder' => E::ts('- any -')];
     $shippableTo = CRM_Membershipcard_API_MembershipCardTemplate::cardTemplates();
-    $form->add('select', 'template_id', E::ts('Membership Card to Attachment'), $shippableTo, FALSE, $attribute);
+    $form->add('select', 'template_id', E::ts('Membership Card Template'), $shippableTo, FALSE, $attribute);
   }
 }
 
