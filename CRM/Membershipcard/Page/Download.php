@@ -41,7 +41,12 @@ class CRM_Membershipcard_Page_Download extends CRM_Core_Page {
     $membershipID = CRM_Utils_Request::retrieve('mid', 'Positive');
     $contactID = $contactID ?? NULL;
     $membershipID = $membershipID ?? NULL;
-    $template_id = 1;
+    $domainID = CRM_Core_Config::domainID();
+    $settings = Civi::settings($domainID);
+    $template_id = $settings->get('membership_card_template_id');
+    if (!$template_id) {
+      CRM_Core_Error::fatal('No template configured for membership card generation');
+    }
     $result = CRM_Membershipcard_API_MembershipCard::quickGenerate($template_id, 'pdf', $contactID, $membershipID);
 
     // Set headers for file download

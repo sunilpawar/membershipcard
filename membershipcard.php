@@ -35,23 +35,33 @@ function membershipcard_civicrm_enable(): void {
  * Implements hook_civicrm_navigationMenu().
  */
 function membershipcard_civicrm_navigationMenu(&$menu) {
-  _membershipcard_civix_insert_navigation_menu($menu, 'Memberships', array(
+  _membershipcard_civix_insert_navigation_menu($menu, 'Memberships', [
     'label' => E::ts('Membership Cards'),
     'name' => 'membership_cards',
     'url' => 'civicrm/membership-cards',
     'permission' => 'access CiviMember',
     'operator' => 'OR',
     'separator' => 0,
-  ));
+  ]);
 
-  _membershipcard_civix_insert_navigation_menu($menu, 'Memberships', array(
+  _membershipcard_civix_insert_navigation_menu($menu, 'Memberships', [
     'label' => E::ts('Card Templates'),
     'name' => 'membership_card_templates',
     'url' => 'civicrm/membership-card-templates',
     'permission' => 'administer CiviCRM',
     'operator' => 'OR',
     'separator' => 0,
-  ));
+  ]);
+
+  _membershipcard_civix_insert_navigation_menu($menu, 'Administer/CiviMember',
+    [
+      'label' => E::ts('Membership Card Settings'),
+      'name' => 'membership_card_settings',
+      'url' => 'civicrm/membership-card/settings',
+      'permission' => 'administer CiviCRM',
+      'operator' => 'OR',
+      'separator' => 0,
+    ]);
 
   _membershipcard_civix_navigationMenu($menu);
 }
@@ -317,4 +327,14 @@ function membershipcard_civicrm_links($op, $objectName, $objectId, &$links, &$ma
       'weight' => 50,
     ];
   }
+}
+
+/**
+ * Implements hook_civicrm_permission().
+ */
+function membershipcard_civicrm_permission(&$permissions) {
+  $permissions['download membership card'] = [
+    'label' => E::ts('Membership Card: Download Cards'),
+    'description' => E::ts('Permission to download membership cards'),
+  ];
 }

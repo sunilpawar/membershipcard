@@ -48,13 +48,13 @@
     <page_callback>CRM_Membershipcard_Page_Download</page_callback>
     <access_arguments>access CiviMember</access_arguments>
   </item>
-  <!-- Download Card -->
+  <!-- Quick Download Card -->
   <item>
     <path>civicrm/membership-card/quick-generate</path>
     <title>Generate and Download Membership Card</title>
     <desc>Generate and Download a membership card</desc>
     <page_callback>CRM_Membershipcard_Page_Download::quickGenerateDownload</page_callback>
-    <access_arguments>access CiviCRM</access_arguments>
+    <access_arguments>download membership card</access_arguments>
   </item>
   <!-- Verify Card -->
   <item>
@@ -64,14 +64,6 @@
     <page_callback>CRM_Membershipcard_Page_Verify</page_callback>
     <access_arguments>access CiviCRM</access_arguments>
     <is_public>1</is_public>
-  </item>
-  <!-- Email Card -->
-  <item>
-    <path>civicrm/membership-card/email</path>
-    <title>Email Membership Card</title>
-    <desc>Email a membership card</desc>
-    <page_callback>CRM_Membershipcard_Form_Email</page_callback>
-    <access_arguments>access CiviMember</access_arguments>
   </item>
   <!-- Bulk Generate Cards -->
   <item>
@@ -89,55 +81,11 @@
     <page_callback>CRM_Membershipcard_Page_Preview</page_callback>
     <access_arguments>access CiviMember</access_arguments>
   </item>
-  <!-- Template Export -->
-  <item>
-    <path>civicrm/membership-card-template/export</path>
-    <title>Export Card Template</title>
-    <desc>Export a membership card template</desc>
-    <page_callback>CRM_Membershipcard_Page_Export</page_callback>
-    <access_arguments>administer CiviCRM</access_arguments>
-  </item>
-  <!-- Template Import -->
-  <item>
-    <path>civicrm/membership-card-template/import</path>
-    <title>Import Card Template</title>
-    <desc>Import a membership card template</desc>
-    <page_callback>CRM_Membershipcard_Form_Import</page_callback>
-    <access_arguments>administer CiviCRM</access_arguments>
-  </item>
   <item>
     <path>civicrm/membership-card/settings</path>
     <title>Membership Card Settings</title>
     <desc>Configure membership card settings</desc>
     <page_callback>CRM_Membershipcard_Form_Settings</page_callback>
     <access_arguments>administer CiviCRM</access_arguments>
-  </item>
-  <!-- Card Statistics -->
-  <item>
-    <path>civicrm/membership-cards/statistics</path>
-    <title>Card Statistics</title>
-    <desc>View membership card usage statistics</desc>
-    <page_callback>CRM_Membershipcard_Page_Statistics</page_callback>
-    <access_arguments>access CiviMember</access_arguments>
-  </item>
-  <!-- API Documentation -->
-  <item>
-    <path>civicrm/membership-card/api-docs</path>
-    <title>API Documentation</title>
-    <desc>Membership card API documentation</desc>
-    <page_callback>CRM_Membershipcard_Page_ApiDocs</page_callback>
-    <access_arguments>administer CiviCRM</access_arguments>
-  </item>
-  <item>
-    <path>civicrm/membershipcard-list</path>
-    <page_callback>CRM_Membershipcard_Page_MembershipCards</page_callback>
-    <title>MembershipCards</title>
-    <access_arguments>access CiviCRM</access_arguments>
-  </item>
-  <item>
-    <path>civicrm/admin/card-settings</path>
-    <page_callback>CRM_Membershipcard_Form_Settings</page_callback>
-    <title>Settings</title>
-    <access_arguments>access CiviCRM</access_arguments>
   </item>
 </menu>
