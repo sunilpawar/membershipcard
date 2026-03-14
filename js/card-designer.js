@@ -833,6 +833,19 @@ class MembershipCardDesigner {
           <option value="right">Right</option>
         </select>
       </div>
+      <div class="form-group">
+        <div class="text-style-options">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="text-bold"> <strong>Bold</strong>
+          </label>
+          <label class="checkbox-inline">
+            <input type="checkbox" id="text-italic"> <em>Italic</em>
+          </label>
+          <label class="checkbox-inline">
+            <input type="checkbox" id="text-underline"> <u>Underline</u>
+          </label>
+        </div>
+      </div>
     `;
     propertyPanel.appendChild(textProps);
 
@@ -910,6 +923,41 @@ class MembershipCardDesigner {
     document.getElementById('text-color').addEventListener('input', (e) => {
       if (this.selectedElement && this.selectedElement.type === 'text') {
         this.selectedElement.set('fill', e.target.value);
+        this.canvas.renderAll();
+        this.saveState();
+      }
+    });
+
+    document.getElementById('text-align').addEventListener('change', (e) => {
+      if (this.selectedElement && this.selectedElement.type === 'text') {
+        this.selectedElement.set('textAlign', e.target.value);
+        this.canvas.renderAll();
+        this.saveState();
+      }
+    });
+
+    document.getElementById('text-bold').addEventListener('change', (e) => {
+      if (this.selectedElement && this.selectedElement.type === 'text') {
+        const isItalic = this.selectedElement.fontStyle === 'italic';
+        this.selectedElement.set('fontWeight', e.target.checked ? 'bold' : 'normal');
+        // Re-apply fontStyle to keep italic state intact after weight change
+        this.selectedElement.set('fontStyle', isItalic ? 'italic' : 'normal');
+        this.canvas.renderAll();
+        this.saveState();
+      }
+    });
+
+    document.getElementById('text-italic').addEventListener('change', (e) => {
+      if (this.selectedElement && this.selectedElement.type === 'text') {
+        this.selectedElement.set('fontStyle', e.target.checked ? 'italic' : 'normal');
+        this.canvas.renderAll();
+        this.saveState();
+      }
+    });
+
+    document.getElementById('text-underline').addEventListener('change', (e) => {
+      if (this.selectedElement && this.selectedElement.type === 'text') {
+        this.selectedElement.set('underline', e.target.checked);
         this.canvas.renderAll();
         this.saveState();
       }
@@ -1110,6 +1158,24 @@ class MembershipCardDesigner {
       document.getElementById('font-size').value = this.selectedElement.fontSize;
       document.getElementById('font-family').value = this.selectedElement.fontFamily;
       document.getElementById('text-color').value = this.selectedElement.fill;
+      // Alignment
+      const alignEl = document.getElementById('text-align');
+      if (alignEl) {
+        alignEl.value = this.selectedElement.textAlign || 'left';
+      }
+      // Bold / italic / underline
+      const boldEl = document.getElementById('text-bold');
+      const italicEl = document.getElementById('text-italic');
+      const underlineEl = document.getElementById('text-underline');
+      if (boldEl) {
+        boldEl.checked = (this.selectedElement.fontWeight === 'bold');
+      }
+      if (italicEl) {
+        italicEl.checked = (this.selectedElement.fontStyle === 'italic');
+      }
+      if (underlineEl) {
+        underlineEl.checked = !!this.selectedElement.underline;
+      }
     } else if (this.selectedElement.type === 'image') {
       document.getElementById('image-properties').style.display = 'block';
       const actualWidth = Math.round(this.selectedElement.width * this.selectedElement.scaleX);

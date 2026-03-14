@@ -1195,6 +1195,7 @@ class CRM_Membershipcard_API_MembershipCard {
 
     $bold = ($fontWeight === 'bold' || (int)$fontWeight >= 700);
     $italic = ($fontStyle === 'italic' || $fontStyle === 'oblique');
+    $underline = !empty($element['underline']) || strtolower($element['textDecoration'] ?? '') === 'underline';
 
     // Resolve TTF font file
     $fontPath = self::getFontPath($fontFamily, $bold, $italic);
@@ -1259,7 +1260,24 @@ class CRM_Membershipcard_API_MembershipCard {
 
       // Render the line
       imagettftext($image, $fontSize, 0, (int)$x, (int)$y, $textColor, $fontPath, $line);
-    }
+
+      // Draw underline if requested
+      if ($underline && $line !== '') {
+        // imagettfbbox returns [x1,y1, x2,y2, x3,y3, x4,y4] for the bounding box
+        $bbox = imagettfbbox($fontSize, 0, $fontPath, $line);
+        // Width of this specific line
+        $lineTextWidth = abs($bbox[2] - $bbox[0]);
+        // Underline sits ~1-2px below the baseline ($y is already the baseline for TTF)
+        $underlineY = (int)$y + max(2, (int)($fontSize * 0.15));
+        $underlineThickness = max(1, (int)($fontSize * 0.07));
+        $underlineStartX = (int)$x;
+        for ($t = 0; $t < $underlineThickness; $t++) {
+          imageline($image, $underlineStartX, $underlineY + $t,
+                    $underlineStartX + $lineTextWidth, $underlineY + $t,
+                    $textColor);
+        }
+      }
+    } // end foreach $allLines
   }
 
   /**
