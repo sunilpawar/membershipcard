@@ -252,7 +252,11 @@ class MembershipCardDesigner {
           }
         });
         this.canvas.renderAll();
+        this.updateElementCount();
       });
+    }
+    else {
+      this.updateElementCount();
     }
 
     // Set background
@@ -627,9 +631,18 @@ class MembershipCardDesigner {
     });
   }
 
+  updateElementCount() {
+    const countEl = document.getElementById('element-count');
+    if (!countEl) return;
+    // Count all canvas objects except grid lines
+    const count = this.canvas.getObjects().filter(obj => !obj.isGridLine).length;
+    countEl.textContent = count;
+  }
+
   // Enhanced save state for dual-sided
   saveState() {
     this.saveCurrentSideData();
+    this.updateElementCount();
 
     // Save complete template state
     const templateData = {

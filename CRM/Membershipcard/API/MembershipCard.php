@@ -1374,7 +1374,7 @@ class CRM_Membershipcard_API_MembershipCard {
     ];
 
     $charWidth = $charWidths[$font] ?? 7;
-    return strlen($text) * $charWidth;
+    return mb_strlen($text, 'UTF-8') * $charWidth;
   }
 
   /**
@@ -1409,9 +1409,10 @@ class CRM_Membershipcard_API_MembershipCard {
 
     // Find the maximum length that fits with ellipsis
     $maxLengthWithEllipsis = $maxWidth - $ellipsisWidth;
+    $len = mb_strlen($text, 'UTF-8');
 
-    for ($i = strlen($text) - 1; $i > 0; $i--) {
-      $truncated = substr($text, 0, $i);
+    for ($i = $len - 1; $i > 0; $i--) {
+      $truncated = mb_substr($text, 0, $i, 'UTF-8');
       if (self::getTextWidth($truncated, $font) <= $maxLengthWithEllipsis) {
         return $truncated . $ellipsis;
       }
