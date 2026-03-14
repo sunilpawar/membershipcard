@@ -7,7 +7,9 @@ class MembershipCardDesigner {
     this.selectedElement = null;
     this.tokens = {};
     this.gridSize = 10;
-    this.snapToGrid = true;
+    this.snapToGrid = false;  // off by default; toggled with grid button
+    this.gridVisible = false;
+    this._gridLines = [];
 
     // Dual-sided support
     this.currentSide = 'front';
@@ -143,7 +145,9 @@ class MembershipCardDesigner {
     // Grid toggle
     const gridToggle = document.createElement('button');
     gridToggle.className = 'btn btn-secondary';
-    gridToggle.innerHTML = '<i class="fa fa-grid"></i> Grid';
+    gridToggle.id = 'grid-toggle-btn';
+    gridToggle.title = 'Toggle grid overlay (helps with element alignment)';
+    gridToggle.innerHTML = '<i class="fa fa-th"></i> Grid';
     gridToggle.onclick = () => this.toggleGrid();
     toolbar.appendChild(gridToggle);
 
@@ -170,6 +174,11 @@ class MembershipCardDesigner {
 
     // Load new side data
     this.loadSideData();
+
+    // Redraw grid if it was visible
+    if (this.gridVisible) {
+      this.drawGrid();
+    }
 
     // Clear selection
     this.canvas.discardActiveObject();
@@ -206,10 +215,19 @@ class MembershipCardDesigner {
   }
 
   saveCurrentSideData() {
-    // Save canvas state for current side
+    // Temporarily remove grid lines so they are never saved to the template
+    const gridLines = this._gridLines || [];
+    gridLines.forEach(l => this.canvas.remove(l));
+
     const canvasData = this.canvas.toJSON(['tokenValue', 'elementType', 'isToken', 'cardSide']);
     this.cardData[this.currentSide].elements = canvasData;
     this.cardData[this.currentSide].background_color = this.canvas.backgroundColor || '#ffffff';
+
+    // Re-add grid lines after serialising
+    gridLines.forEach(l => {
+      this.canvas.add(l);
+      this.canvas.sendToBack(l);
+    });
 
     console.log(`Saved ${this.currentSide} side data:`, this.cardData[this.currentSide]);
   }
@@ -1203,11 +1221,82 @@ class MembershipCardDesigner {
   }
 
   toggleGrid() {
-    this.snapToGrid = !this.snapToGrid;
-    const gridBtn = document.querySelector('.btn:has(i.fa-grid)');
+    this.gridVisible = !this.gridVisible;
+    // Keep snap-to-grid in sync with visibility
+    this.snapToGrid = this.gridVisible;
+
+    // Update button appearance
+    const gridBtn = document.getElementById('grid-toggle-btn');
     if (gridBtn) {
-      gridBtn.classList.toggle('active', this.snapToGrid);
+      gridBtn.classList.toggle('active', this.gridVisible);
+      gridBtn.classList.toggle('btn-secondary', !this.gridVisible);
+      gridBtn.classList.toggle('btn-info', this.gridVisible);
     }
+
+    if (this.gridVisible) {
+      this.drawGrid();
+    } else {
+      this.clearGrid();
+    }
+  }
+
+  drawGrid() {
+    this.clearGrid(); // remove any existing grid lines first
+
+    const width  = this.canvas.width;
+    const height = this.canvas.height;
+    const size   = this.gridSize;
+
+    const gridLines = [];
+
+    // Vertical lines
+    for (let x = 0; x <= width; x += size) {
+      const isMajor = (x % (size * 5) === 0);
+      const line = new fabric.Line([x, 0, x, height], {
+        stroke: isMajor ? '#b0b8c8' : '#d8dde8',
+        strokeWidth: isMajor ? 0.8 : 0.5,
+        selectable: false,
+        evented: false,
+        excludeFromExport: true,
+        isGridLine: true,
+        hoverCursor: 'default',
+      });
+      gridLines.push(line);
+      this.canvas.add(line);
+      this.canvas.sendToBack(line);
+    }
+
+    // Horizontal lines
+    for (let y = 0; y <= height; y += size) {
+      const isMajor = (y % (size * 5) === 0);
+      const line = new fabric.Line([0, y, width, y], {
+        stroke: isMajor ? '#b0b8c8' : '#d8dde8',
+        strokeWidth: isMajor ? 0.8 : 0.5,
+        selectable: false,
+        evented: false,
+        excludeFromExport: true,
+        isGridLine: true,
+        hoverCursor: 'default',
+      });
+      gridLines.push(line);
+      this.canvas.add(line);
+      this.canvas.sendToBack(line);
+    }
+
+    this._gridLines = gridLines;
+    this.canvas.renderAll();
+  }
+
+  clearGrid() {
+    if (this._gridLines && this._gridLines.length) {
+      this._gridLines.forEach(line => this.canvas.remove(line));
+      this._gridLines = [];
+    }
+    // Safety sweep — remove any stray isGridLine objects
+    this.canvas.getObjects().forEach(obj => {
+      if (obj.isGridLine) this.canvas.remove(obj);
+    });
+    this.canvas.renderAll();
   }
 
   snapToGridHandler(e) {
